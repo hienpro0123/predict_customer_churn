@@ -98,7 +98,6 @@ def _parse_batch_csv(uploaded_file: Any) -> tuple[list[dict[str, Any]], list[str
 
 
 def _render_batch_predict_section() -> None:
-    st.divider()
     st.markdown("#### Batch Predict (CSV)")
     st.caption("Upload CSV with required columns to run prediction for multiple customers at once.")
 
@@ -182,35 +181,39 @@ def _render_batch_predict_section() -> None:
 def main() -> None:
     inject_styles()
     render_header()
-    base_inputs = collect_inputs()
+    tab_manual, tab_batch = st.tabs(["Single Prediction", "Batch Prediction (CSV)"])
 
-    if st.button("Run Prediction"):
-        features = create_features(base_inputs)
-        missing_fields = validate_inputs(features)
+    with tab_manual:
+        base_inputs = collect_inputs()
 
-        if missing_fields:
-            st.warning(f"Missing required fields: {', '.join(missing_fields)}")
-        else:
-            with st.spinner("Calling Databricks Model Serving..."):
-                ok, error_message, technical_detail, result = query_databricks(features)
+        if st.button("Run Prediction", key="run_single_prediction"):
+            features = create_features(base_inputs)
+            missing_fields = validate_inputs(features)
 
-            if not ok:
-                st.error(error_message)
-                if technical_detail:
-                    with st.expander("Xem chi tiet ky thuat"):
-                        st.code(technical_detail)
-            elif result is not None:
-                prediction, probability = result
-                st.session_state["baseline_result"] = (prediction, probability)
-                st.session_state["baseline_inputs"] = dict(base_inputs)
+            if missing_fields:
+                st.warning(f"Missing required fields: {', '.join(missing_fields)}")
+            else:
+                with st.spinner("Calling Databricks Model Serving..."):
+                    ok, error_message, technical_detail, result = query_databricks(features)
 
-    baseline_result = st.session_state.get("baseline_result")
-    baseline_inputs = st.session_state.get("baseline_inputs")
-    if baseline_result is not None and baseline_inputs is not None:
-        prediction, probability = baseline_result
-        render_result(prediction, probability, baseline_inputs)
+                if not ok:
+                    st.error(error_message)
+                    if technical_detail:
+                        with st.expander("Technical details"):
+                            st.code(technical_detail)
+                elif result is not None:
+                    prediction, probability = result
+                    st.session_state["baseline_result"] = (prediction, probability)
+                    st.session_state["baseline_inputs"] = dict(base_inputs)
 
-    _render_batch_predict_section()
+        baseline_result = st.session_state.get("baseline_result")
+        baseline_inputs = st.session_state.get("baseline_inputs")
+        if baseline_result is not None and baseline_inputs is not None:
+            prediction, probability = baseline_result
+            render_result(prediction, probability, baseline_inputs)
+
+    with tab_batch:
+        _render_batch_predict_section()
 
 
 if __name__ == "__main__":

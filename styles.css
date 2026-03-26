@@ -356,6 +356,32 @@ div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
     box-shadow: 0 14px 30px rgba(29, 78, 216, 0.4);
 }
 
+div[data-baseweb="tab-list"] {
+    gap: 8px;
+}
+
+div[data-baseweb="tab-highlight"] {
+    background: transparent !important;
+}
+
+button[data-baseweb="tab"] {
+    border-radius: 12px 12px 0 0 !important;
+    background: rgba(30, 41, 59, 0.5) !important;
+    color: #cbd5e1 !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+    padding: 10px 16px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2px;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #0d6db6, #2563eb) !important;
+    color: #f8fafc !important;
+    border-color: rgba(125, 211, 252, 0.55) !important;
+    box-shadow: 0 8px 20px rgba(29, 78, 216, 0.35);
+}
+
 section[data-testid="stFileUploaderDropzone"] {
     background: #14233a !important;
     border: 1px dashed rgba(125, 211, 252, 0.45) !important;
