@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config.settings import CONTRACT_LENGTH_MAPPING
+from utils.helpers import get_risk_badge, get_top_risk_drivers
 
 
 def inject_styles() -> None:
@@ -73,74 +74,6 @@ def collect_inputs() -> dict[str, Any]:
         "Total Spend": float(total_spend),
         "Last Interaction": int(last_interaction),
     }
-
-
-def get_risk_badge(probability: float) -> tuple[str, str]:
-    if probability < 0.3:
-        return "#0f766e", "LOW RISK"
-    if probability < 0.7:
-        return "#a16207", "MEDIUM RISK"
-    return "#b91c1c", "HIGH RISK"
-
-
-def get_top_risk_drivers(base_inputs: dict[str, Any], top_n: int = 5) -> list[dict[str, Any]]:
-    payment_delay = float(base_inputs["Payment Delay"])
-    support_calls = float(base_inputs["Support Calls"])
-    last_interaction = float(base_inputs["Last Interaction"])
-    usage = float(base_inputs["Usage Frequency"])
-    tenure = float(base_inputs["Tenure"])
-    total_spend = float(base_inputs["Total Spend"])
-    subscription = str(base_inputs["Subscription Type"])
-    contract = str(base_inputs["Contract Length"])
-
-    contract_risk_map = {"1 month": 1.0, "3 months": 0.55, "12 months": 0.2}
-    subscription_risk_map = {"Basic": 1.0, "Standard": 0.55, "Premium": 0.2}
-
-    candidates = [
-        {
-            "label": "Payment Delay",
-            "score": min(payment_delay / 30.0, 1.0),
-            "reason": f"{int(payment_delay)} days delayed payment behavior.",
-        },
-        {
-            "label": "Support Calls",
-            "score": min(support_calls / 20.0, 1.0),
-            "reason": f"{int(support_calls)} support interactions in this period.",
-        },
-        {
-            "label": "Last Interaction",
-            "score": min(last_interaction / 30.0, 1.0),
-            "reason": f"{int(last_interaction)} days since most recent interaction.",
-        },
-        {
-            "label": "Usage Frequency",
-            "score": max(0.0, 1.0 - min(usage / 30.0, 1.0)),
-            "reason": f"Usage level is {int(usage)} sessions.",
-        },
-        {
-            "label": "Tenure",
-            "score": max(0.0, 1.0 - min(tenure / 60.0, 1.0)),
-            "reason": f"Tenure is {int(tenure)} months.",
-        },
-        {
-            "label": "Total Spend",
-            "score": max(0.0, 1.0 - min(total_spend / 10000.0, 1.0)),
-            "reason": f"Total spend is {total_spend:,.0f}.",
-        },
-        {
-            "label": "Subscription Type",
-            "score": subscription_risk_map.get(subscription, 0.5),
-            "reason": f"Current plan is {subscription}.",
-        },
-        {
-            "label": "Contract Length",
-            "score": contract_risk_map.get(contract, 0.5),
-            "reason": f"Contract is {contract}.",
-        },
-    ]
-
-    ranked = sorted(candidates, key=lambda item: item["score"], reverse=True)
-    return ranked[:top_n]
 
 
 def render_result(prediction: int, probability: float, base_inputs: dict[str, Any]) -> None:
