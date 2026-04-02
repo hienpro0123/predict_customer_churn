@@ -6,10 +6,18 @@ from config.settings import (
     API_TIMEOUT_SECONDS,
     DATABRICKS_TOKEN,
     DATABRICKS_URL,
+    DISABLE_OUTBOUND_PROXY,
     FEATURE_COLUMNS,
     REQUEST_HEADERS,
 )
 from utils.helpers import clamp_probability, get_error_message, normalize_prediction_value
+
+
+def _create_databricks_session() -> requests.Session:
+    session = requests.Session()
+    if DISABLE_OUTBOUND_PROXY:
+        session.trust_env = False
+    return session
 
 
 def build_payload(features: dict[str, Any]) -> dict[str, Any]:
@@ -115,7 +123,7 @@ def query_databricks(
     }
 
     try:
-        response = requests.post(
+        response = _create_databricks_session().post(
             DATABRICKS_URL,
             headers=headers,
             json=payload,
@@ -175,7 +183,7 @@ def query_databricks_batch(
     }
 
     try:
-        response = requests.post(
+        response = _create_databricks_session().post(
             DATABRICKS_URL,
             headers=headers,
             json=payload,

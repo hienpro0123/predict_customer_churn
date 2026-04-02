@@ -7,6 +7,13 @@ except ImportError:
     load_dotenv = None
 
 
+def _get_bool_env(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def load_local_env_file() -> None:
     env_path = Path(__file__).resolve().parents[1] / ".env"
     if not env_path.exists():
@@ -34,6 +41,10 @@ else:
 DATABRICKS_URL = os.getenv("DATABRICKS_URL", "").strip()
 DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN", "").strip()
 API_TIMEOUT_SECONDS = int(os.getenv("DATABRICKS_TIMEOUT", "30"))
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+GEMINI_TIMEOUT_SECONDS = int(os.getenv("GEMINI_TIMEOUT", "30"))
+DISABLE_OUTBOUND_PROXY = _get_bool_env("DISABLE_OUTBOUND_PROXY", default=False)
 
 FEATURE_COLUMNS = [
     "Age",

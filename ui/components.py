@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config.settings import CONTRACT_LENGTH_MAPPING
+from services.customer_db_service import get_contract_label
 from utils.helpers import get_risk_badge, get_top_risk_drivers
 
 
@@ -35,30 +36,99 @@ def render_header() -> None:
     )
 
 
-def collect_inputs() -> dict[str, Any]:
+def collect_inputs(
+    default_values: dict[str, Any] | None = None,
+    key_prefix: str = "manual",
+) -> dict[str, Any]:
+    default_values = default_values or {}
+
+    gender_options = ["Male", "Female"]
+    subscription_options = ["Basic", "Standard", "Premium"]
+    contract_options = ["Monthly", "Quarterly", "Annual"]
+
+    default_gender = default_values.get("Gender", "Male")
+    default_subscription = default_values.get("Subscription Type", "Basic")
+    default_contract_label = get_contract_label(default_values.get("Contract Length", "1 month"))
+
     st.markdown("#### Customer Profile Inputs")
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Customer Information")
-        age = st.number_input("Age", min_value=18, max_value=80, value=30)
-        tenure = st.number_input("Tenure (months)", min_value=1, max_value=60, value=12)
-        usage = st.number_input("Usage Frequency", min_value=1, max_value=30, value=10)
-        support_calls = st.number_input("Support Calls", min_value=0, max_value=20, value=1)
-        gender = st.selectbox("Gender", ["Male", "Female"])
+        age = st.number_input(
+            "Age",
+            min_value=18,
+            max_value=80,
+            value=int(default_values.get("Age", 30)),
+            key=f"{key_prefix}_age",
+        )
+        tenure = st.number_input(
+            "Tenure (months)",
+            min_value=1,
+            max_value=60,
+            value=int(default_values.get("Tenure", 12)),
+            key=f"{key_prefix}_tenure",
+        )
+        usage = st.number_input(
+            "Usage Frequency",
+            min_value=1,
+            max_value=30,
+            value=int(default_values.get("Usage Frequency", 10)),
+            key=f"{key_prefix}_usage",
+        )
+        support_calls = st.number_input(
+            "Support Calls",
+            min_value=0,
+            max_value=20,
+            value=int(default_values.get("Support Calls", 1)),
+            key=f"{key_prefix}_support_calls",
+        )
+        gender = st.selectbox(
+            "Gender",
+            gender_options,
+            index=gender_options.index(default_gender) if default_gender in gender_options else 0,
+            key=f"{key_prefix}_gender",
+        )
 
     with col2:
         st.subheader("Subscription Details")
-        payment_delay = st.number_input("Payment Delay", min_value=0, max_value=30, value=0)
+        payment_delay = st.number_input(
+            "Payment Delay",
+            min_value=0,
+            max_value=30,
+            value=int(default_values.get("Payment Delay", 0)),
+            key=f"{key_prefix}_payment_delay",
+        )
         total_spend = st.number_input(
             "Total Spend",
             min_value=0.0,
             max_value=10000.0,
-            value=500.0,
+            value=float(default_values.get("Total Spend", 500.0)),
+            key=f"{key_prefix}_total_spend",
         )
-        last_interaction = st.number_input("Last Interaction", min_value=0, max_value=30, value=5)
-        subscription = st.selectbox("Subscription Type", ["Basic", "Standard", "Premium"])
-        contract_label = st.selectbox("Contract Length", ["Monthly", "Quarterly", "Annual"])
+        last_interaction = st.number_input(
+            "Last Interaction",
+            min_value=0,
+            max_value=30,
+            value=int(default_values.get("Last Interaction", 5)),
+            key=f"{key_prefix}_last_interaction",
+        )
+        subscription = st.selectbox(
+            "Subscription Type",
+            subscription_options,
+            index=subscription_options.index(default_subscription)
+            if default_subscription in subscription_options
+            else 0,
+            key=f"{key_prefix}_subscription_type",
+        )
+        contract_label = st.selectbox(
+            "Contract Length",
+            contract_options,
+            index=contract_options.index(default_contract_label)
+            if default_contract_label in contract_options
+            else 0,
+            key=f"{key_prefix}_contract_length",
+        )
 
     st.divider()
 
@@ -76,7 +146,22 @@ def collect_inputs() -> dict[str, Any]:
     }
 
 
-def render_result(prediction: int, probability: float, base_inputs: dict[str, Any]) -> None:
+# Hiển thị lịch sử dự đoán ngắn gọn của một khách hàng.
+def render_prediction_history(history_rows: list[dict[str, Any]]) -> None:
+    st.markdown("#### Prediction History")
+    if not history_rows:
+        st.info("Khách hàng này chưa có lịch sử dự đoán.")
+        return
+
+    st.dataframe(history_rows, width="stretch")
+
+
+def render_result(
+    prediction: int,
+    probability: float,
+    base_inputs: dict[str, Any],
+    insight: dict[str, str] | None = None,
+) -> None:
     st.divider()
     st.markdown("#### Model Decision")
     st.subheader("Prediction Result")
@@ -133,21 +218,21 @@ def render_result(prediction: int, probability: float, base_inputs: dict[str, An
                 unsafe_allow_html=True,
             )
 
-        st.markdown(
-            """
-            <div class="insight-box">
-                <h3>Insight</h3>
-                <p>The AI model evaluates:</p>
-                <ul>
-                    <li>Payment delay behavior</li>
-                    <li>Customer engagement</li>
-                    <li>Spending patterns</li>
-                    <li>Subscription characteristics</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        recommended_action = (
+            insight.get("recommended_action", "").strip()
+            if insight is not None
+            else ""
         )
+        if recommended_action:
+            st.markdown(
+                f"""
+                <div class="insight-box">
+                    <h3>Recommended Action</h3>
+                    <p>{recommended_action}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         drivers_html = "".join(
             [
