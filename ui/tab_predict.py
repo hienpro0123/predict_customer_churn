@@ -9,7 +9,6 @@ from db.repository import (
 from data_processing.csv_parser import parse_batch_csv
 from services.batch_service import prepare_batch_prediction_features, run_batch_prediction
 from services.customer_db_service import (
-    build_customer_option_label,
     format_prediction_history,
     map_base_inputs_to_customer,
     map_customer_to_base_inputs,
@@ -126,26 +125,27 @@ def render_database_prediction_tab() -> None:
         st.info("Hiện chưa có khách hàng nào trong database.")
         return
 
-    selected_label = st.selectbox(
-        "Customer in database",
-        [customer["id"] for customer in customers],
-        format_func=lambda customer_id: build_customer_option_label(
-            next(customer for customer in customers if customer["id"] == customer_id)
-        ),
-        key="database_customer_selector",
+    customer_ids = {str(customer["id"]).upper() for customer in customers}
+    entered_customer_id = st.text_input(
+        "Customer ID",
+        value=st.session_state.get("database_customer_input", ""),
+        placeholder="ST01",
+        key="database_customer_input",
     )
-    selected_customer_id = selected_label
+    selected_customer_id = entered_customer_id.strip().upper()
+
+    if not selected_customer_id:
+        st.info("Nhập mã khách hàng, ví dụ `ST01`.")
+        return
+
+    if selected_customer_id not in customer_ids:
+        st.warning(f"Không tìm thấy khách hàng `{selected_customer_id}` trong database.")
+        return
 
     customer = get_customer_by_id(selected_customer_id)
     if customer is None:
         st.warning("Không tìm thấy dữ liệu khách hàng được chọn.")
         return
-
-    st.markdown(
-        f"**Customer ID:** `{customer['id']}` | "
-        f"**Subscription:** `{customer['subscription_type']}` | "
-        f"**Contract:** `{customer['contract_length']}`"
-    )
 
     base_inputs = map_customer_to_base_inputs(customer)
     edited_inputs = collect_inputs(base_inputs, key_prefix=f"db_{selected_customer_id}")
