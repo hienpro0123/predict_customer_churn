@@ -10,6 +10,7 @@ st.set_page_config(page_title="Customer Churn", layout="wide")
 
 
 def main() -> None:
+    create_tables()
     inject_styles()
     render_header()
     tab_manual, tab_database, tab_batch = st.tabs(
