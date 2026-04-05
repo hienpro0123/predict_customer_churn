@@ -35,6 +35,9 @@ GOLD_BASE_PATH = os.getenv("GOLD_BASE_PATH", "/Volumes/workspace/default/churn/g
 MLFLOW_MODEL_NAME = os.getenv(
     "MLFLOW_MODEL_NAME", "workspace.default.customer_churn_model"
 )
+SERVING_ENDPOINT_NAME = os.getenv(
+    "SERVING_ENDPOINT_NAME", "customer-churn-endpoint"
+)
 
 
 EXPECTED_COLUMN_ORDER = [
