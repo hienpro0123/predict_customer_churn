@@ -19,8 +19,8 @@ def get_spark() -> SparkSession:
 
 
 def load_bronze_data(spark: SparkSession):
-    df_train = spark.read.format("delta").load(BRONZE_TRAIN_PATH)
-    df_test = spark.read.format("delta").load(BRONZE_TEST_PATH)
+    df_train = spark.read.parquet(BRONZE_TRAIN_PATH)
+    df_test = spark.read.parquet(BRONZE_TEST_PATH)
     return df_train, df_test
 
 
@@ -50,8 +50,8 @@ def clean_data(df_train, df_test):
 
 
 def save_silver_data(df_train, df_test) -> None:
-    df_train.write.format("delta").mode("overwrite").save(SILVER_TRAIN_PATH)
-    df_test.write.format("delta").mode("overwrite").save(SILVER_TEST_PATH)
+    df_train.write.mode("overwrite").parquet(SILVER_TRAIN_PATH)
+    df_test.write.mode("overwrite").parquet(SILVER_TEST_PATH)
 
 
 def main() -> None:

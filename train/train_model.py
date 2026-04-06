@@ -31,8 +31,8 @@ def get_spark() -> SparkSession:
 
 
 def load_gold_data(spark: SparkSession):
-    df_train = spark.read.format("delta").load(GOLD_TRAIN_PATH).toPandas()
-    df_test = spark.read.format("delta").load(GOLD_TEST_PATH).toPandas()
+    df_train = spark.read.parquet(GOLD_TRAIN_PATH).toPandas()
+    df_test = spark.read.parquet(GOLD_TEST_PATH).toPandas()
     return df_train, df_test
 
 

@@ -34,8 +34,8 @@ def read_raw_data(spark: SparkSession):
 
 
 def save_bronze_data(df_train, df_test) -> None:
-    df_train.write.format("delta").mode("overwrite").save(BRONZE_TRAIN_PATH)
-    df_test.write.format("delta").mode("overwrite").save(BRONZE_TEST_PATH)
+    df_train.write.mode("overwrite").parquet(BRONZE_TRAIN_PATH)
+    df_test.write.mode("overwrite").parquet(BRONZE_TEST_PATH)
 
 
 def main() -> None:

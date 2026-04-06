@@ -19,8 +19,8 @@ def get_spark() -> SparkSession:
 
 
 def load_silver_data(spark: SparkSession):
-    df_train = spark.read.format("delta").load(SILVER_TRAIN_PATH)
-    df_test = spark.read.format("delta").load(SILVER_TEST_PATH)
+    df_train = spark.read.parquet(SILVER_TRAIN_PATH)
+    df_test = spark.read.parquet(SILVER_TEST_PATH)
     return df_train, df_test
 
 
@@ -43,8 +43,8 @@ def add_features(df):
 
 
 def save_gold_data(df_train, df_test) -> None:
-    df_train.write.format("delta").mode("overwrite").save(GOLD_TRAIN_PATH)
-    df_test.write.format("delta").mode("overwrite").save(GOLD_TEST_PATH)
+    df_train.write.mode("overwrite").parquet(GOLD_TRAIN_PATH)
+    df_test.write.mode("overwrite").parquet(GOLD_TEST_PATH)
 
 
 def main() -> None:

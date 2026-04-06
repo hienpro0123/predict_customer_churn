@@ -17,7 +17,7 @@ def get_spark() -> SparkSession:
 
 
 def load_gold_test_data(spark: SparkSession):
-    return spark.read.format("delta").load(GOLD_TEST_PATH).toPandas()
+    return spark.read.parquet(GOLD_TEST_PATH).toPandas()
 
 
 def evaluate_latest_model(df_test) -> None:
