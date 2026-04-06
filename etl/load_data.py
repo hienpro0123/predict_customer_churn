@@ -1,55 +1,51 @@
-from __future__ import annotations
-
-from typing import Tuple
-
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import SparkSession
 
 
-def load_csv_dataset(
-    spark: SparkSession,
-    path: str,
-    *,
-    header: bool = True,
-    infer_schema: bool = True,
-) -> DataFrame:
-    """Load a raw CSV dataset into a Spark DataFrame."""
-    return spark.read.csv(path, header=header, inferSchema=infer_schema)
+RAW_BASE_PATH = "/Volumes/workspace/default/data_customers/raw"
+RAW_TRAIN_PATH = f"{RAW_BASE_PATH}/customer_churn_dataset-training-master.csv"
+RAW_TEST_PATH = f"{RAW_BASE_PATH}/customer_churn_dataset-testing-master.csv"
+
+BRONZE_BASE_PATH = "/Volumes/workspace/default/data_customers/bronze"
+BRONZE_TRAIN_PATH = f"{BRONZE_BASE_PATH}/train"
+BRONZE_TEST_PATH = f"{BRONZE_BASE_PATH}/test"
 
 
-def load_raw_train_test(
-    spark: SparkSession,
-    train_path: str,
-    test_path: str,
-) -> Tuple[DataFrame, DataFrame]:
-    """Load the raw training and testing datasets."""
-    return (
-        load_csv_dataset(spark, train_path),
-        load_csv_dataset(spark, test_path),
+def get_spark() -> SparkSession:
+    spark = SparkSession.getActiveSession()
+    if spark is not None:
+        return spark
+    return SparkSession.builder.appName("customer-churn-load-data").getOrCreate()
+
+
+def read_raw_data(spark: SparkSession):
+    df_train = spark.read.csv(
+        RAW_TRAIN_PATH,
+        header=True,
+        inferSchema=True,
     )
 
+    df_test = spark.read.csv(
+        RAW_TEST_PATH,
+        header=True,
+        inferSchema=True,
+    )
 
-def write_dataset(
-    df: DataFrame,
-    path: str,
-    *,
-    fmt: str = "delta",
-    mode: str = "overwrite",
-) -> None:
-    """Persist a DataFrame in the configured storage format."""
-    df.write.format(fmt).mode(mode).save(path)
+    return df_train, df_test
 
 
-def ingest_raw_to_bronze(
-    spark: SparkSession,
-    train_path: str,
-    test_path: str,
-    bronze_train_path: str,
-    bronze_test_path: str,
-    *,
-    fmt: str = "delta",
-) -> Tuple[DataFrame, DataFrame]:
-    """Load raw CSV data and persist it as the bronze layer."""
-    train_df, test_df = load_raw_train_test(spark, train_path, test_path)
-    write_dataset(train_df, bronze_train_path, fmt=fmt)
-    write_dataset(test_df, bronze_test_path, fmt=fmt)
-    return train_df, test_df
+def save_bronze_data(df_train, df_test) -> None:
+    df_train.write.format("delta").mode("overwrite").save(BRONZE_TRAIN_PATH)
+    df_test.write.format("delta").mode("overwrite").save(BRONZE_TEST_PATH)
+
+
+def main() -> None:
+    spark = get_spark()
+    df_train, df_test = read_raw_data(spark)
+    save_bronze_data(df_train, df_test)
+
+    print(f"Saved bronze train to {BRONZE_TRAIN_PATH}")
+    print(f"Saved bronze test to {BRONZE_TEST_PATH}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,92 +1,76 @@
-from __future__ import annotations
-
-import re
-from typing import Dict, Iterable, Tuple
-
-from pyspark.sql import DataFrame, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, sum, when
 
 
-REQUIRED_COLUMNS = (
-    "customer_id",
-    "age",
-    "gender",
-    "tenure",
-    "usage_frequency",
-    "support_calls",
-    "payment_delay",
-    "subscription_type",
-    "contract_length",
-    "total_spend",
-    "last_interaction",
-    "churn",
-)
+BRONZE_BASE_PATH = "/Volumes/workspace/default/data_customers/bronze"
+BRONZE_TRAIN_PATH = f"{BRONZE_BASE_PATH}/train"
+BRONZE_TEST_PATH = f"{BRONZE_BASE_PATH}/test"
+
+SILVER_BASE_PATH = "/Volumes/workspace/default/data_customers/silver"
+SILVER_TRAIN_PATH = f"{SILVER_BASE_PATH}/train"
+SILVER_TEST_PATH = f"{SILVER_BASE_PATH}/test"
 
 
-def _normalize_column_name(name: str) -> str:
-    cleaned = re.sub(r"[^0-9a-zA-Z]+", "_", name.strip().lower())
-    cleaned = cleaned.strip("_")
-    aliases = {
-        "customerid": "customer_id",
-    }
-    return aliases.get(cleaned, cleaned)
+def get_spark() -> SparkSession:
+    spark = SparkSession.getActiveSession()
+    if spark is not None:
+        return spark
+    return SparkSession.builder.appName("customer-churn-cleaning").getOrCreate()
 
 
-def standardize_columns(df: DataFrame) -> DataFrame:
-    """Rename columns to a stable snake_case schema."""
-    for current in df.columns:
-        renamed = _normalize_column_name(current)
-        if renamed != current:
-            df = df.withColumnRenamed(current, renamed)
-    return df
+def load_bronze_data(spark: SparkSession):
+    df_train = spark.read.format("delta").load(BRONZE_TRAIN_PATH)
+    df_test = spark.read.format("delta").load(BRONZE_TEST_PATH)
+    return df_train, df_test
 
 
-def validate_required_columns(
-    df: DataFrame,
-    required_columns: Iterable[str] = REQUIRED_COLUMNS,
-) -> None:
-    missing = sorted(set(required_columns) - set(df.columns))
-    if missing:
-        raise ValueError(f"Missing required columns: {missing}")
-
-
-def missing_value_counts(df: DataFrame) -> Dict[str, int]:
-    """Return null counts for each column as a plain Python dictionary."""
-    row = df.select(
+def get_missing_counts(df):
+    return df.select(
         [
-            F.sum(F.when(F.col(column).isNull(), 1).otherwise(0)).alias(column)
-            for column in df.columns
+            sum(when(col(c).isNull(), 1).otherwise(0)).alias(c)
+            for c in df.columns
         ]
-    ).collect()[0]
-    return row.asDict()
+    )
 
 
-def clean_customer_data(
-    df: DataFrame,
-    *,
-    drop_nulls: bool = True,
-    drop_duplicates: bool = True,
-) -> DataFrame:
-    """Apply the notebook's cleaning logic with schema normalization."""
-    df = standardize_columns(df)
-    validate_required_columns(df)
+def clean_data(df_train, df_test):
+    df_train = df_train.drop("CustomerID")
+    df_test = df_test.drop("CustomerID")
 
-    if drop_nulls:
-        df = df.dropna()
-    if drop_duplicates:
-        df = df.dropDuplicates()
+    missing_df_train = get_missing_counts(df_train)
+    missing_df_test = get_missing_counts(df_test)
 
-    return df
+    df_train = df_train.dropna()
+    df_test = df_test.dropna()
+
+    df_train = df_train.dropDuplicates()
+    df_test = df_test.dropDuplicates()
+
+    return df_train, df_test, missing_df_train, missing_df_test
 
 
-def clean_train_test(
-    train_df: DataFrame,
-    test_df: DataFrame,
-) -> Tuple[DataFrame, DataFrame]:
-    """Clean train and test data and align them to the same column order."""
-    clean_train = clean_customer_data(train_df)
-    clean_test = clean_customer_data(test_df)
+def save_silver_data(df_train, df_test) -> None:
+    df_train.write.format("delta").mode("overwrite").save(SILVER_TRAIN_PATH)
+    df_test.write.format("delta").mode("overwrite").save(SILVER_TEST_PATH)
 
-    ordered_columns = [column for column in clean_train.columns if column in clean_test.columns]
-    clean_train = clean_train.select(ordered_columns)
-    clean_test = clean_test.select(ordered_columns)
-    return clean_train, clean_test
+
+def main() -> None:
+    spark = get_spark()
+    df_train, df_test = load_bronze_data(spark)
+    df_train, df_test, missing_df_train, missing_df_test = clean_data(df_train, df_test)
+
+    print("Missing values in train before cleaning:")
+    missing_df_train.show()
+    print("Missing values in test before cleaning:")
+    missing_df_test.show()
+
+    print("Missing values in train after dropna:")
+    get_missing_counts(df_train).show()
+
+    save_silver_data(df_train, df_test)
+    print(f"Saved silver train to {SILVER_TRAIN_PATH}")
+    print(f"Saved silver test to {SILVER_TEST_PATH}")
+
+
+if __name__ == "__main__":
+    main()
