@@ -1,6 +1,7 @@
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 from mlflow import MlflowClient
 from mlflow.models import infer_signature
 from sklearn.compose import ColumnTransformer
@@ -13,7 +14,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, RobustScaler
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
-
 from pyspark.sql import SparkSession
 
 
@@ -79,6 +79,13 @@ def build_candidate_models():
             class_weight="balanced",
             random_state=42,
         ),
+        "Random Forest": RandomForestClassifier
+        (n_estimators=100, 
+         max_depth=5, 
+         class_weight='balanced', 
+         random_state=42, 
+         n_jobs=-1),
+
         "XGBoost": XGBClassifier(
             n_estimators=100,
             max_depth=3,
