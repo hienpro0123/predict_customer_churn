@@ -1,7 +1,6 @@
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from mlflow import MlflowClient
 from mlflow.models import infer_signature
 from sklearn.compose import ColumnTransformer
@@ -14,7 +13,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, RobustScaler
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
 from pyspark.sql import SparkSession
+
 
 
 GOLD_BASE_PATH = "/Volumes/workspace/default/data_customers/gold"
@@ -79,12 +80,13 @@ def build_candidate_models():
             class_weight="balanced",
             random_state=42,
         ),
-        "Random Forest": RandomForestClassifier
-        (n_estimators=100, 
-         max_depth=5, 
-         class_weight='balanced', 
-         random_state=42, 
-         n_jobs=-1),
+        "Random Forest": RandomForestClassifier(
+            n_estimators=100,
+            max_depth=5,
+            class_weight='balanced',
+            random_state=42,
+            n_jobs=-1
+        ),
 
         "XGBoost": XGBClassifier(
             n_estimators=100,
@@ -151,7 +153,10 @@ def train_and_select_model(df_train: pd.DataFrame, df_test: pd.DataFrame):
 
 
 def log_model(final_pipeline, best_model_name, results_df, signature) -> str:
-    with mlflow.start_run(run_name=best_model_name):
+    spark = SparkSession.getActiveSession()
+    user = spark.sql("SELECT current_user()").collect()[0][0]
+    mlflow.set_experiment(f"/Users/{user}/churn_experiment")
+    with mlflow.start_run(run_name=best_model_name, nested=True):
         mlflow.log_param("model_name", best_model_name)
 
         mlflow.log_metric("accuracy", results_df.loc[best_model_name, "Accuracy"])
