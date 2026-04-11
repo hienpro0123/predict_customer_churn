@@ -21,7 +21,7 @@ Streamlit dashboard for customer churn prediction using Databricks model serving
 
 ## 🏗️ System Architecture
 
-<img width="5647" height="3107" alt="Architecture" src="https://github.com/user-attachments/assets/7521ea8a-451e-46ff-9db0-71dd6ddf8181" />
+<img width="5647" height="3107" alt="Architecture" src="https://github.com/hienpro0123/predict_customer_churn/blob/main/img/flow.jpg" />
 
 ## 📂 Project Structure
 ```text
