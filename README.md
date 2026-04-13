@@ -1,74 +1,93 @@
-# 🧑‍💼 Customer Churn Dashboard
+# Customer Churn Fullstack App
 
-Streamlit dashboard for customer churn prediction using Databricks model serving, Gemini-powered retention insight, PostgreSQL prediction history, and CSV batch scoring.
+FastAPI backend and React frontend for customer churn prediction, batch scoring, retention insight generation, and PostgreSQL-backed prediction history.
 
-## Features
-- Manual single-customer prediction.
-- Prediction from database with editable customer inputs.
-- Retention `recommended_action` generated after prediction.
-- Prediction history persisted in PostgreSQL.
-- Batch prediction from CSV.
-- Risk gauge and top risk-driver summary in the UI.
+## Architecture
 
-## Tech Stack
-- Python 3.10+
-- Streamlit
-- Requests
-- Plotly
-- PostgreSQL
-- `python-dotenv`
+Data flow:
 
+`Frontend -> FastAPI routers -> services -> database / external model APIs -> response`
 
-## 🏗️ System Architecture
+## Project Structure
 
-<img width="5647" height="3107" alt="Architecture" src="https://github.com/hienpro0123/predict_customer_churn/blob/main/img/flow.jpg" />
-
-## 📂 Project Structure
 ```text
-app.py
-styles.css
-sample_batch_input.csv
+backend/
+  core/
+  database/
+  models/
+  routers/
+  schemas/
+  services/
+  utils/
+  main.py
 
-config/
-  settings.py                 # environment config and shared constants
+frontend/
+  src/
+    api/
+    components/
+    pages/
 
-data_processing/
-  batch_formatter.py          # batch result formatting/export
-  csv_parser.py               # CSV parsing and validation
-
-db/
-  connection.py               # PostgreSQL connection helper
-  repository.py               # customer and prediction persistence
-  schema.py                   # schema creation and lightweight migration
-
-features/
-  feature_engineering.py      # feature creation and validation
-
-services/
-  batch_service.py            # batch prediction orchestration
-  customer_db_service.py      # DB/UI mapping helpers
-  databricks_api.py           # Databricks API client
-  gemini.py                   # retention insight generation
-  prediction_service.py       # single prediction orchestration
-
-ui/
-  components.py               # shared Streamlit components
-  tab_predict.py              # manual, database, and batch tabs
-
-utils/
-  constants.py                # CSV and dropdown constants
-  helpers.py                  # scoring and UI helper logic
+tests/
+docker/
+docker-compose.yml
+requirements.txt
 ```
 
-## Environment Variables
-Create `.env` in the project root:
+## Preserved Functionality
+
+- Single-customer prediction
+- Prediction from stored PostgreSQL customer records
+- Prediction history persistence
+- Batch CSV validation and scoring
+- Databricks model serving integration
+- Gemini retention recommendation with fallback strategy
+- Risk level and top churn-driver analytics
+
+## Backend
+
+- `routers/`: REST endpoints for health, prediction, and customer workflows
+- `services/`: feature engineering, scoring, CSV parsing, analytics, customer logic
+- `models/`: SQLAlchemy ORM entities for `customers` and `predictions`
+- `schemas/`: Pydantic request/response models
+- `core/`: environment-driven settings
+- `database/`: engine, sessions, and bootstrap
+- `utils/`: shared constants and helpers
+
+Run locally:
+
+```bash
+pip install -r requirements.txt
+uvicorn backend.main:app --reload
+```
+
+## Frontend
+
+The frontend reproduces the original three user flows:
+
+- Single Prediction
+- Predict From Database
+- Batch Prediction
+
+Run locally:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Set `VITE_API_BASE_URL` if the backend is not available at `http://localhost:8000/api`.
+
+## Environment
+
+Use the existing `.env` values for Databricks, Gemini, and PostgreSQL. Recommended variables:
 
 ```env
-DATABRICKS_URL=<your_databricks_serving_endpoint>
-DATABRICKS_TOKEN=<your_databricks_pat>
+DATABRICKS_URL=
+DATABRICKS_TOKEN=
 DATABRICKS_TIMEOUT=30
 
-GEMINI_API_KEY=<your_gemini_api_key>
+GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
 GEMINI_TIMEOUT=15
 
@@ -78,51 +97,16 @@ POSTGRES_DB=churn_db
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=admin
 
+FRONTEND_ORIGIN=http://localhost:5173
 DISABLE_OUTBOUND_PROXY=true
 ```
 
-`DISABLE_OUTBOUND_PROXY=true` is useful for local environments where `HTTP_PROXY` or `HTTPS_PROXY` point to an invalid local proxy. In production, set it based on your network policy.
+## Docker
 
-## Install
-```bash
-pip install -r requirements.txt
-```
+`docker-compose.yml` now runs PostgreSQL, pgAdmin, the FastAPI backend, and the React frontend.
 
-## Database Setup
-Run schema creation and lightweight migration:
+## Tests
 
 ```bash
-python -m db.schema
+pytest
 ```
-
-This creates:
-- `customers`
-- `predictions`
-
-It also ensures `recommended_action` exists on `predictions`.
-
-## Run Locally
-```bash
-streamlit run app.py
-```
-
-## Batch Prediction CSV
-Required columns:
-
-```text
-Age, Gender, Tenure, Usage Frequency, Support Calls, Payment Delay,
-Subscription Type, Contract Length, Total Spend, Last Interaction
-```
-
-Accepted values:
-- `Gender`: `Male` or `Female`
-- `Subscription Type`: `Basic`, `Standard`, `Premium`
-- `Contract Length`: `Monthly` / `Quarterly` / `Annual` or `1 month` / `3 months` / `12 months`
-
-Quick test file:
-- `sample_batch_input.csv`
-
-## Notes
-- Manual prediction results are stored in Streamlit `session_state`.
-- Database predictions store history in PostgreSQL.
-- Retention insight uses Gemini and falls back to rule-based actions if Gemini is unavailable.
