@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import time
 from functools import lru_cache
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from core.config import settings
 
@@ -51,12 +54,40 @@ Return ONLY JSON:
   "recommended_action": "..."
 }}"""
 
+RATE_LIMIT_COOLDOWN_SECONDS = 60
+_rate_limit_until = 0.0
+
 
 def _create_session() -> requests.Session:
     session = requests.Session()
+    retries = Retry(
+        total=2,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=frozenset({"POST"}),
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
     if settings.DISABLE_OUTBOUND_PROXY:
         session.trust_env = False
     return session
+
+
+def _is_rate_limited() -> bool:
+    return time.time() < _rate_limit_until
+
+
+def _mark_rate_limited() -> None:
+    global _rate_limit_until
+    _rate_limit_until = time.time() + RATE_LIMIT_COOLDOWN_SECONDS
+
+
+def _rate_limit_message() -> str:
+    seconds_left = max(0, int(_rate_limit_until - time.time()))
+    if seconds_left <= 0:
+        return "Gemini API is temporarily rate limited. Using fallback recommendation."
+    return f"Gemini API is temporarily rate limited. Using fallback recommendation for the next {seconds_left}s."
 
 
 def _get_fallback_action(base_inputs: dict[str, Any], probability: float) -> str:
@@ -109,6 +140,9 @@ def _generate_retention_insight_cached(base_inputs_json: str, probability: float
     if not settings.GEMINI_API_KEY:
         fallback_payload["insight_error"] = "Missing GEMINI_API_KEY."
         return fallback_payload
+    if _is_rate_limited():
+        fallback_payload["insight_error"] = _rate_limit_message()
+        return fallback_payload
 
     prompt = INSIGHT_PROMPT_TEMPLATE.format(
         customer_json=base_inputs_json,
@@ -132,7 +166,15 @@ def _generate_retention_insight_cached(base_inputs_json: str, probability: float
         response.raise_for_status()
         return _parse_insight(_extract_text(response.json()))
     except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
-        fallback_payload["insight_error"] = str(exc)
+        if (
+            isinstance(exc, requests.HTTPError)
+            and exc.response is not None
+            and exc.response.status_code == 429
+        ):
+            _mark_rate_limited()
+            fallback_payload["insight_error"] = _rate_limit_message()
+        else:
+            fallback_payload["insight_error"] = str(exc)
         return fallback_payload
 
 
