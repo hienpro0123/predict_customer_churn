@@ -20,8 +20,6 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
-
-    FRONTEND_ORIGIN: str
     DISABLE_OUTBOUND_PROXY: bool
 
     model_config = SettingsConfigDict(
