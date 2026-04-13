@@ -1,4 +1,4 @@
-# Customer Churn Dashboard
+# 🧑‍💼 Customer Churn Dashboard
 
 Streamlit dashboard for customer churn prediction using Databricks model serving, Gemini-powered retention insight, PostgreSQL prediction history, and CSV batch scoring.
 
@@ -18,7 +18,12 @@ Streamlit dashboard for customer churn prediction using Databricks model serving
 - PostgreSQL
 - `python-dotenv`
 
-## Project Structure
+
+## 🏗️ System Architecture
+
+<img width="5647" height="3107" alt="Architecture" src="https://github.com/hienpro0123/predict_customer_churn/blob/main/img/flow.jpg" />
+
+## 📂 Project Structure
 ```text
 app.py
 styles.css
