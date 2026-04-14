@@ -20,6 +20,7 @@ const defaultValues = {
 export default function SinglePredictionPage() {
   const [values, setValues] = useState(defaultValues);
   const [result, setResult] = useState(null);
+  const [isResultStale, setIsResultStale] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,6 +30,7 @@ export default function SinglePredictionPage() {
     try {
       const data = await runSinglePrediction(values);
       setResult(data);
+      setIsResultStale(false);
     } catch (err) {
       setError(err.message ?? "Prediction failed.");
     } finally {
@@ -38,6 +40,9 @@ export default function SinglePredictionPage() {
 
   function updateField(key, value) {
     setValues((current) => ({ ...current, [key]: value }));
+    if (result) {
+      setIsResultStale(true);
+    }
   }
 
   return (
@@ -49,7 +54,7 @@ export default function SinglePredictionPage() {
         </button>
         {error ? <div className="error-banner">{error}</div> : null}
       </div>
-      <ResultCard result={result} title="Single Prediction Result" />
+      <ResultCard result={result} title="Single Prediction Result" stale={isResultStale} />
     </div>
   );
 }

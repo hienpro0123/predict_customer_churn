@@ -1,3 +1,26 @@
+function formatCreatedAt(value) {
+  if (!value) {
+    return "-";
+  }
+  const raw = String(value);
+  const normalized = /z$/i.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw) ? raw : `${raw}Z`;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) {
+    return raw;
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(date);
+}
+
 export default function PredictionHistory({ rows }) {
   return (
     <section>
@@ -24,7 +47,7 @@ export default function PredictionHistory({ rows }) {
                   <td>{row.predicted_label}</td>
                   <td>{(row.churn_probability * 100).toFixed(2)}%</td>
                   <td>{row.recommended_action || "-"}</td>
-                  <td>{new Date(row.created_at).toLocaleString()}</td>
+                  <td>{formatCreatedAt(row.created_at)}</td>
                 </tr>
               ))}
             </tbody>

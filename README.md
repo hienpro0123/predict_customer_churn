@@ -116,7 +116,8 @@ npm install
 ### Start the Backend
 
 ```bash
-uvicorn backend.main:app --reload
+cd backend 
+uvicorn main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`.
@@ -140,8 +141,9 @@ DATABRICKS_TOKEN=
 DATABRICKS_TIMEOUT=30
 
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-2.0-flash
 GEMINI_TIMEOUT=15
+FAST_PREDICTION_MODE=false
 
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
