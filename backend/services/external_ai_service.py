@@ -56,14 +56,15 @@ Return ONLY JSON:
 
 RATE_LIMIT_COOLDOWN_SECONDS = 60
 _rate_limit_until = 0.0
+_key_rate_limits: dict[str, float] = {}
 
 
 def _create_session() -> requests.Session:
     session = requests.Session()
     retries = Retry(
-        total=2,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
+        total=1,
+        backoff_factor=0.3,
+        status_forcelist=[500, 502, 503, 504],
         allowed_methods=frozenset({"POST"}),
         respect_retry_after_header=True,
     )
@@ -81,6 +82,15 @@ def _is_rate_limited() -> bool:
 def _mark_rate_limited() -> None:
     global _rate_limit_until
     _rate_limit_until = time.time() + RATE_LIMIT_COOLDOWN_SECONDS
+
+
+def _mark_key_rate_limited(api_key: str) -> None:
+    _key_rate_limits[api_key] = time.time() + RATE_LIMIT_COOLDOWN_SECONDS
+
+
+def _is_key_available(api_key: str) -> bool:
+    retry_after = _key_rate_limits.get(api_key, 0.0)
+    return time.time() >= retry_after
 
 
 def _rate_limit_message() -> str:
@@ -129,6 +139,25 @@ def _parse_insight(raw_text: str) -> dict[str, str]:
     return {"recommended_action": action, "insight_source": "AI", "insight_error": ""}
 
 
+def _request_insight(prompt: str, api_key: str) -> dict[str, str]:
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{settings.GEMINI_MODEL}:generateContent?key={api_key}"
+    )
+    request_payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
+    }
+    response = _create_session().post(
+        url,
+        headers={"Content-Type": "application/json"},
+        json=request_payload,
+        timeout=settings.GEMINI_TIMEOUT,
+    )
+    response.raise_for_status()
+    return _parse_insight(_extract_text(response.json()))
+
+
 @lru_cache(maxsize=256)
 def _generate_retention_insight_cached(base_inputs_json: str, probability: float) -> dict[str, str]:
     base_inputs = json.loads(base_inputs_json)
@@ -137,47 +166,61 @@ def _generate_retention_insight_cached(base_inputs_json: str, probability: float
         "insight_source": "Fallback",
         "insight_error": "",
     }
-    if not settings.GEMINI_API_KEY:
+    key_pool = settings.gemini_api_key_pool
+    if not key_pool:
         fallback_payload["insight_error"] = "Missing GEMINI_API_KEY."
         return fallback_payload
-    if _is_rate_limited():
-        fallback_payload["insight_error"] = _rate_limit_message()
+    available_keys = [key for key in key_pool if _is_key_available(key)]
+    if not available_keys:
+        if _is_rate_limited():
+            fallback_payload["insight_error"] = _rate_limit_message()
+        else:
+            fallback_payload["insight_error"] = "All Gemini API keys are cooling down after rate limits."
         return fallback_payload
 
     prompt = INSIGHT_PROMPT_TEMPLATE.format(
         customer_json=base_inputs_json,
         probability=round(float(probability), 4),
     )
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{settings.GEMINI_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
-    )
-    request_payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
-    }
+    saw_rate_limit = False
+    last_error_message = ""
     try:
-        response = _create_session().post(
-            url,
-            headers={"Content-Type": "application/json"},
-            json=request_payload,
-            timeout=settings.GEMINI_TIMEOUT,
-        )
-        response.raise_for_status()
-        return _parse_insight(_extract_text(response.json()))
+        for api_key in available_keys:
+            try:
+                return _request_insight(prompt, api_key)
+            except requests.HTTPError as exc:
+                status_code = exc.response.status_code if exc.response is not None else None
+                if status_code == 429:
+                    saw_rate_limit = True
+                    _mark_key_rate_limited(api_key)
+                    last_error_message = f"Key throttled with status {status_code}."
+                    time.sleep(4)
+                    continue
+                raise
+            except requests.RequestException as exc:
+                last_error_message = str(exc)
+                time.sleep(4)
+                continue
+            except (ValueError, json.JSONDecodeError) as exc:
+                last_error_message = str(exc)
+                continue
     except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
-        if (
-            isinstance(exc, requests.HTTPError)
-            and exc.response is not None
-            and exc.response.status_code == 429
-        ):
-            _mark_rate_limited()
-            fallback_payload["insight_error"] = _rate_limit_message()
-        else:
-            fallback_payload["insight_error"] = str(exc)
-        return fallback_payload
+        last_error_message = str(exc)
+
+    if saw_rate_limit:
+        _mark_rate_limited()
+        fallback_payload["insight_error"] = _rate_limit_message()
+    else:
+        fallback_payload["insight_error"] = last_error_message or "Gemini request failed."
+    return fallback_payload
 
 
 def generate_retention_insight(base_inputs: dict[str, Any], probability: float) -> dict[str, str]:
+    if settings.FAST_PREDICTION_MODE:
+        return {
+            "recommended_action": _get_fallback_action(base_inputs, probability),
+            "insight_source": "Fallback",
+            "insight_error": "FAST_PREDICTION_MODE enabled; skipped external AI call.",
+        }
     cache_key = json.dumps(base_inputs, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
     return dict(_generate_retention_insight_cached(cache_key, round(float(probability), 4)))

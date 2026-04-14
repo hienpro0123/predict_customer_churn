@@ -21,17 +21,30 @@ const subscriptionFields = [
 ];
 
 function NumberField({ field, values, onChange, disabled }) {
+  const value = values[field.key];
+
   return (
     <label className="field">
       <span>{field.label}</span>
       <input
         disabled={disabled}
         type={field.type}
-        value={values[field.key]}
+        value={value ?? ""}
         min={field.min}
         max={field.max}
         step={field.step ?? 1}
-        onChange={(event) => onChange(field.key, Number(event.target.value))}
+        onChange={(event) => {
+          const rawValue = event.target.value;
+          if (rawValue === "") {
+            onChange(field.key, "");
+            return;
+          }
+          const numericValue = Number(rawValue);
+          if (Number.isNaN(numericValue)) {
+            return;
+          }
+          onChange(field.key, numericValue);
+        }}
       />
     </label>
   );

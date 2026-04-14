@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 import {
+  fetchCustomers,
   fetchCustomer,
   fetchCustomerPredictions,
-  fetchCustomers,
   runCustomerPrediction
 } from "../api/client";
 import FormSection from "../components/FormSection";
@@ -26,52 +26,77 @@ function mapCustomerToInputs(customer) {
 }
 
 export default function DatabasePredictionPage() {
-  const [customers, setCustomers] = useState([]);
+  const [customerOptions, setCustomerOptions] = useState([]);
+  const [customerIdInput, setCustomerIdInput] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [values, setValues] = useState(null);
   const [history, setHistory] = useState([]);
   const [result, setResult] = useState(null);
+  const [isResultStale, setIsResultStale] = useState(false);
   const [error, setError] = useState("");
-  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
+  const [isLoadingCustomer, setIsLoadingCustomer] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     fetchCustomers()
-      .then((data) => {
-        setCustomers(data);
-        if (data.length > 0) {
-          setSelectedId(data[0].id);
-        }
-      })
-      .catch((err) => setError(err.message ?? "Could not load customers."))
-      .finally(() => setIsLoadingCustomers(false));
+      .then((data) => setCustomerOptions(data.map((item) => item.id)))
+      .catch(() => setCustomerOptions([]))
+      .finally(() => setIsLoadingSuggestions(false));
   }, []);
 
-  useEffect(() => {
-    if (!selectedId) {
+  async function handleLoadCustomer() {
+    const normalizedId = customerIdInput.trim();
+    if (!normalizedId) {
+      setError("Vui lòng nhập Customer ID.");
       return;
     }
 
-    Promise.all([fetchCustomer(selectedId), fetchCustomerPredictions(selectedId)])
-      .then(([customer, predictionHistory]) => {
-        setValues(mapCustomerToInputs(customer));
-        setHistory(predictionHistory);
-        setResult(null);
-      })
-      .catch((err) => setError(err.message ?? "Could not load customer detail."));
-  }, [selectedId]);
+    setIsLoadingCustomer(true);
+    setError("");
+    try {
+      const [customer, predictionHistory] = await Promise.all([
+        fetchCustomer(normalizedId),
+        fetchCustomerPredictions(normalizedId)
+      ]);
+      setSelectedId(normalizedId);
+      setValues(mapCustomerToInputs(customer));
+      setHistory(predictionHistory);
+      setResult(null);
+      setIsResultStale(false);
+    } catch (err) {
+      setValues(null);
+      setHistory([]);
+      setResult(null);
+      if (err?.status === 404) {
+        setError("Không tìm thấy khách hàng.");
+      } else {
+        setError(err.message ?? "Không thể tải thông tin khách hàng.");
+      }
+    } finally {
+      setIsLoadingCustomer(false);
+    }
+  }
 
   function updateField(key, value) {
     setValues((current) => ({ ...current, [key]: value }));
+    if (result) {
+      setIsResultStale(true);
+    }
   }
 
   async function handlePredict() {
+    if (!selectedId || !values) {
+      setError("Vui lòng load khách hàng trước.");
+      return;
+    }
     setIsRunning(true);
     setError("");
     try {
       const data = await runCustomerPrediction(selectedId, values);
       setResult(data.result);
       setHistory(data.history);
+      setIsResultStale(false);
     } catch (err) {
       setError(err.message ?? "Could not run prediction for this customer.");
     } finally {
@@ -79,39 +104,57 @@ export default function DatabasePredictionPage() {
     }
   }
 
-  if (isLoadingCustomers) {
-    return <div className="empty-state">Loading customers...</div>;
-  }
-
   return (
     <div className="page-stack">
       <section>
         <h4>Predict From Database</h4>
-        <p className="section-caption">Select a stored customer, review the profile, and save a new prediction.</p>
+        <p className="section-caption">Enter a customer ID (e.g. ST01), load profile, then run prediction.</p>
         <div className="form-card">
-          <label className="field">
-            <span>Customer ID</span>
-            <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.id}
-                </option>
+          <div className="inline-controls">
+            <label className="field compact">
+              <span>Customer ID</span>
+              <input
+                type="text"
+                value={customerIdInput}
+                onChange={(event) => setCustomerIdInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleLoadCustomer();
+                  }
+                }}
+                list="customer-id-options"
+                placeholder="Enter customer ID, e.g. ST01"
+              />
+            </label>
+            <datalist id="customer-id-options">
+              {customerOptions.map((customerId) => (
+                <option key={customerId} value={customerId} />
               ))}
-            </select>
-          </label>
+            </datalist>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={handleLoadCustomer}
+              disabled={isLoadingCustomer || isLoadingSuggestions}
+            >
+              {isLoadingCustomer ? "Loading..." : "Load Customer"}
+            </button>
+          </div>
+          {isLoadingSuggestions ? <p className="section-caption">Đang tải danh sách khách hàng...</p> : null}
         </div>
       </section>
 
-      {values ? <FormSection values={values} onChange={updateField} disabled={isRunning} /> : null}
+      {values ? <FormSection values={values} onChange={updateField} disabled={isRunning || isLoadingCustomer} /> : null}
 
       <div className="action-row">
-        <button className="primary-button full-width" onClick={handlePredict} disabled={!values || isRunning}>
+        <button className="primary-button full-width" onClick={handlePredict} disabled={!values || isRunning || isLoadingCustomer}>
           {isRunning ? "Scoring..." : "Run Prediction From Database"}
         </button>
         {error ? <div className="error-banner">{error}</div> : null}
       </div>
 
-      <ResultCard result={result} title="Prediction Result" />
+      <ResultCard result={result} title="Prediction Result" stale={isResultStale} />
       <PredictionHistory rows={history} />
     </div>
   );

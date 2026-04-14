@@ -12,8 +12,10 @@ class Settings(BaseSettings):
     DATABRICKS_TIMEOUT: int
 
     GEMINI_API_KEY: str
+    GEMINI_API_KEYS: str = ""
     GEMINI_MODEL: str
     GEMINI_TIMEOUT: int
+    FAST_PREDICTION_MODE: bool = False
 
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
@@ -34,6 +36,15 @@ class Settings(BaseSettings):
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
+    @property
+    def gemini_api_key_pool(self) -> list[str]:
+        keys = [self.GEMINI_API_KEY, *(part.strip() for part in self.GEMINI_API_KEYS.split(","))]
+        unique_keys: list[str] = []
+        for key in keys:
+            if key and key not in unique_keys:
+                unique_keys.append(key)
+        return unique_keys
 
 
 settings = Settings()
