@@ -1,10 +1,15 @@
-# Environment
+# ========================
+# Environment / Virtual Env
+# ========================
 .env
+.env.*
 .venv/
 venv/
 env/
 
-# Python cache and build artifacts
+# ========================
+# Python cache & build
+# ========================
 __pycache__/
 *.py[cod]
 *.pyd
@@ -15,17 +20,57 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Distribution files
+# ========================
+# Build / Distribution
+# ========================
 build/
 dist/
 *.egg-info/
+
+# ========================
+# Frontend
+# ========================
 frontend/node_modules/
 frontend/dist/
 
+# ========================
+# Jupyter Notebook
+# ========================
+.ipynb_checkpoints/
+
+# ========================
+# Databricks
+# ========================
+.databricks/
+dbfs/
+*.dbc
+
+# ========================
+# MLflow
+# ========================
+mlruns/
+mlartifacts/
+
+# ========================
+# Data files (cân nhắc)
+# ========================
+*.csv
+*.parquet
+*.json
+
+# ========================
+# Logs
+# ========================
+*.log
+
+# ========================
 # IDE / Editor
+# ========================
 .vscode/
 .idea/
 
-# OS files
+# ========================
+# OS
+# ========================
 .DS_Store
 Thumbs.db
