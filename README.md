@@ -5,7 +5,7 @@ A full-stack customer churn prediction platform built with **FastAPI**, **React*
 
 ## 🏗️ System Architecture
 
-<img width="5647" height="3107" alt="Architecture" src="https://github.com/hienpro0123/predict_customer_churn/blob/main/img/flow.jpg" />
+<img width="5647" height="3107" alt="Architecture" src="img/flow.jpg" />
 
 
 ## 📁 Project Structure
