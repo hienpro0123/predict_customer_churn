@@ -1,0 +1,72 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from database.session import get_db
+from schemas.customer import CustomerResponse, CustomerUpdate
+from schemas.prediction import CustomerPredictionRequest, CustomerPredictionResponse, StoredPredictionResponse
+from services.customer_service import (
+    get_customer_or_404,
+    get_prediction_history,
+    list_customers,
+    update_customer,
+)
+from services.prediction_service import run_single_prediction, save_prediction_record
+
+
+router = APIRouter(prefix="/customers", tags=["customers"])
+
+
+@router.get("", response_model=list[CustomerResponse])
+def get_customers(db: Session = Depends(get_db)) -> list[CustomerResponse]:
+    return list_customers(db)
+
+
+@router.get("/{customer_id}", response_model=CustomerResponse)
+def get_customer(customer_id: str, db: Session = Depends(get_db)) -> CustomerResponse:
+    return get_customer_or_404(db, customer_id.upper())
+
+
+@router.put("/{customer_id}", response_model=CustomerResponse)
+def put_customer(customer_id: str, payload: CustomerUpdate, db: Session = Depends(get_db)) -> CustomerResponse:
+    return update_customer(db, customer_id.upper(), payload)
+
+
+@router.get("/{customer_id}/predictions", response_model=list[StoredPredictionResponse])
+def get_customer_predictions(customer_id: str, db: Session = Depends(get_db)) -> list[StoredPredictionResponse]:
+    return get_prediction_history(db, customer_id.upper())
+
+
+@router.post("/{customer_id}/predict", response_model=CustomerPredictionResponse)
+def predict_for_customer(
+    customer_id: str,
+    payload: CustomerPredictionRequest,
+    db: Session = Depends(get_db),
+) -> CustomerPredictionResponse:
+    customer = update_customer(
+        db,
+        customer_id.upper(),
+        CustomerUpdate(
+            age=payload.inputs.age,
+            gender=payload.inputs.gender,
+            tenure=payload.inputs.tenure,
+            usage_frequency=payload.inputs.usage_frequency,
+            support_calls=payload.inputs.support_calls,
+            payment_delay=payload.inputs.payment_delay,
+            subscription_type=payload.inputs.subscription_type,
+            contract_length=payload.inputs.contract_length,
+            total_spend=payload.inputs.total_spend,
+            last_interaction=payload.inputs.last_interaction,
+        ),
+    )
+    base_inputs = payload.inputs.to_base_inputs()
+    try:
+        result = run_single_prediction(base_inputs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    save_prediction_record(db, customer, result, base_inputs)
+    history = get_prediction_history(db, customer.id)
+    return CustomerPredictionResponse(
+        customer=CustomerResponse.model_validate(customer),
+        result=result,
+        history=history,
+    )
