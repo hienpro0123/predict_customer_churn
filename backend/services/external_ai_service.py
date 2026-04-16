@@ -59,6 +59,7 @@ _rate_limit_until = 0.0
 _key_rate_limits: dict[str, float] = {}
 
 
+@lru_cache(maxsize=1)
 def _create_session() -> requests.Session:
     session = requests.Session()
     retries = Retry(
@@ -101,7 +102,7 @@ def _rate_limit_message() -> str:
 
 
 def _get_fallback_action(base_inputs: dict[str, Any], probability: float) -> str:
-    total_spend = float(base_inputs.get("Total Spend", 0.0))
+    total_spend = float(base_inputs.get("total_spend", 0.0))
     if probability >= 0.7:
         if total_spend > 1000:
             return "Arrange a direct retention call with a personalized offer and provide VIP support assistance within 24 hours."

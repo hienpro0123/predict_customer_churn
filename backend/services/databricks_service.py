@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Any
 
 import requests
@@ -8,6 +9,7 @@ from utils.constants import FEATURE_COLUMNS
 from utils.helpers import clamp_probability, normalize_prediction_value
 
 
+@lru_cache(maxsize=1)
 def _create_session() -> requests.Session:
     session = requests.Session()
     if settings.DISABLE_OUTBOUND_PROXY:
@@ -66,7 +68,12 @@ def _extract_prediction(result: Any) -> tuple[int, float]:
 
 
 def _post_payload(records: list[dict[str, Any]]) -> list[tuple[int, float]]:
-    payload = {"dataframe_records": [{column: row[column] for column in FEATURE_COLUMNS} for row in records]}
+    payload = {
+        "dataframe_records": [
+            {column: row.get(column) for column in FEATURE_COLUMNS}
+            for row in records
+        ]
+    }
     try:
         response = _create_session().post(
             settings.DATABRICKS_URL,

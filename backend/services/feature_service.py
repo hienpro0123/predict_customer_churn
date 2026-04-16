@@ -3,6 +3,19 @@ from typing import Any
 from utils.constants import FEATURE_COLUMNS
 
 
+def normalize_key(key: str) -> str:
+    return key.strip().lower().replace(" ", "_")
+
+
+def normalize_customerid(value: Any) -> int:
+    if value in (None, ""):
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    digits = "".join(char for char in str(value) if char.isdigit())
+    return int(digits) if digits else 0
+
+
 def get_age_group(age: int) -> str:
     if age < 30:
         return "Young"
@@ -12,22 +25,33 @@ def get_age_group(age: int) -> str:
 
 
 def create_features(base_inputs: dict[str, Any]) -> dict[str, Any]:
-    tenure = base_inputs["Tenure"]
-    usage = base_inputs["Usage Frequency"]
-    payment_delay = base_inputs["Payment Delay"]
-    total_spend = base_inputs["Total Spend"]
+    x = {normalize_key(key): value for key, value in base_inputs.items()}
 
-    engineered_features = {
-        "Age_group": get_age_group(base_inputs["Age"]),
-        "Usage_Per_Tenure": usage / (tenure + 1),
-        "Spend_Per_Usage": total_spend / (usage + 1),
-        "Spend_Per_Tenure": total_spend / (tenure + 1),
-        "Payment_Delay_Ratio": payment_delay / 30,
-        "Engagement_Score": (usage * total_spend) / 1000,
-    }
-    full_features = {**base_inputs, **engineered_features}
-    return {column: full_features[column] for column in FEATURE_COLUMNS}
+    # đảm bảo có customerid
+    x["customerid"] = normalize_customerid(x.get("customerid"))
+
+    # feature engineering
+    tenure = x["tenure"]
+    usage = x["usage_frequency"]
+    spend = x["total_spend"]
+    delay = x["payment_delay"]
+
+    x.update(
+        {
+            "age_group": get_age_group(x["age"]),
+            "usage_per_tenure": usage / (tenure + 1),
+            "spend_per_usage": spend / (usage + 1),
+            "spend_per_tenure": spend / (tenure + 1),
+            "payment_delay_ratio": delay / 30,
+            "engagement_score": (usage * spend) / 1000,
+        }
+    )
+
+    # Đảm bảo tất cả các key trả về đều được chuẩn hóa (viết thường, replace space bằng _)
+    # để khớp với schema mà model yêu cầu
+    return {column: x.get(column) for column in FEATURE_COLUMNS}
 
 
 def validate_inputs(features: dict[str, Any]) -> list[str]:
-    return [field for field in FEATURE_COLUMNS if features.get(field) is None or features.get(field) == ""]
+    # Kiểm tra tính hợp lệ dựa trên key đã chuẩn hóa
+    return [field for field in FEATURE_COLUMNS if features.get(field) in (None, "")]

@@ -1,48 +1,42 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from schemas.customer import CustomerResponse
 
 
 class BaseInputSchema(BaseModel):
-    age: int = Field(validation_alias="Age", serialization_alias="Age")
-    gender: str = Field(validation_alias="Gender", serialization_alias="Gender")
-    tenure: int = Field(validation_alias="Tenure", serialization_alias="Tenure")
+    customerid: int = Field(default=0, validation_alias=AliasChoices("customerid", "CustomerID", "Customer Id"))
+    age: int = Field(validation_alias=AliasChoices("age", "Age"))
+    gender: str = Field(validation_alias=AliasChoices("gender", "Gender"))
+    tenure: int = Field(validation_alias=AliasChoices("tenure", "Tenure"))
     usage_frequency: int = Field(
-        validation_alias="Usage Frequency",
-        serialization_alias="Usage Frequency",
+        validation_alias=AliasChoices("usage_frequency", "Usage Frequency"),
     )
     support_calls: int = Field(
-        validation_alias="Support Calls",
-        serialization_alias="Support Calls",
+        validation_alias=AliasChoices("support_calls", "Support Calls"),
     )
     payment_delay: int = Field(
-        validation_alias="Payment Delay",
-        serialization_alias="Payment Delay",
+        validation_alias=AliasChoices("payment_delay", "Payment Delay"),
     )
     subscription_type: str = Field(
-        validation_alias="Subscription Type",
-        serialization_alias="Subscription Type",
+        validation_alias=AliasChoices("subscription_type", "Subscription Type"),
     )
     contract_length: str = Field(
-        validation_alias="Contract Length",
-        serialization_alias="Contract Length",
+        validation_alias=AliasChoices("contract_length", "Contract Length"),
     )
     total_spend: float = Field(
-        validation_alias="Total Spend",
-        serialization_alias="Total Spend",
+        validation_alias=AliasChoices("total_spend", "Total Spend"),
     )
     last_interaction: int = Field(
-        validation_alias="Last Interaction",
-        serialization_alias="Last Interaction",
+        validation_alias=AliasChoices("last_interaction", "Last Interaction"),
     )
 
     model_config = ConfigDict(populate_by_name=True)
 
     def to_base_inputs(self) -> dict[str, Any]:
-        return self.model_dump(by_alias=True)
+        return self.model_dump()
 
 
 class PredictionRequest(BaseModel):

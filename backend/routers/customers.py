@@ -5,6 +5,7 @@ from database.session import get_db
 from schemas.customer import CustomerResponse, CustomerUpdate
 from schemas.prediction import CustomerPredictionRequest, CustomerPredictionResponse, StoredPredictionResponse
 from services.customer_service import (
+    apply_customer_update,
     get_customer_or_404,
     get_prediction_history,
     list_customers,
@@ -42,9 +43,9 @@ def predict_for_customer(
     payload: CustomerPredictionRequest,
     db: Session = Depends(get_db),
 ) -> CustomerPredictionResponse:
-    customer = update_customer(
-        db,
-        customer_id.upper(),
+    customer = get_customer_or_404(db, customer_id.upper())
+    customer = apply_customer_update(
+        customer,
         CustomerUpdate(
             age=payload.inputs.age,
             gender=payload.inputs.gender,
@@ -63,7 +64,10 @@ def predict_for_customer(
         result = run_single_prediction(base_inputs)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    save_prediction_record(db, customer, result, base_inputs)
+    db.add(customer)
+    save_prediction_record(db, customer, result, base_inputs, commit=False)
+    db.commit()
+    db.refresh(customer)
     history = get_prediction_history(db, customer.id)
     return CustomerPredictionResponse(
         customer=CustomerResponse.model_validate(customer),

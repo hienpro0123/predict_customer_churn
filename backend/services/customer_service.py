@@ -10,18 +10,20 @@ from schemas.customer import CustomerUpdate
 from utils.constants import CONTRACT_LABEL_MAPPING
 
 
+
 def map_customer_to_base_inputs(customer: Customer) -> dict[str, Any]:
     return {
-        "Age": int(customer.age),
-        "Gender": customer.gender,
-        "Tenure": int(customer.tenure),
-        "Usage Frequency": int(customer.usage_frequency),
-        "Support Calls": int(customer.support_calls),
-        "Payment Delay": int(customer.payment_delay),
-        "Subscription Type": customer.subscription_type,
-        "Contract Length": customer.contract_length,
-        "Total Spend": float(customer.total_spend),
-        "Last Interaction": int(customer.last_interaction),
+        "customerid": customer.id,
+        "age": int(customer.age),
+        "gender": customer.gender,
+        "tenure": int(customer.tenure),
+        "usage_frequency": int(customer.usage_frequency),
+        "support_calls": int(customer.support_calls),
+        "payment_delay": int(customer.payment_delay),
+        "subscription_type": customer.subscription_type,
+        "contract_length": customer.contract_length,
+        "total_spend": float(customer.total_spend),
+        "last_interaction": int(customer.last_interaction),
     }
 
 
@@ -42,11 +44,16 @@ def get_customer_or_404(db: Session, customer_id: str) -> Customer:
 
 def update_customer(db: Session, customer_id: str, payload: CustomerUpdate) -> Customer:
     customer = get_customer_or_404(db, customer_id)
-    for key, value in payload.model_dump().items():
-        setattr(customer, key, value)
+    apply_customer_update(customer, payload)
     db.add(customer)
     db.commit()
     db.refresh(customer)
+    return customer
+
+
+def apply_customer_update(customer: Customer, payload: CustomerUpdate) -> Customer:
+    for key, value in payload.model_dump().items():
+        setattr(customer, key, value)
     return customer
 
 

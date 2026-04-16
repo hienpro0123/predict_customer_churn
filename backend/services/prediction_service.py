@@ -37,6 +37,8 @@ def save_prediction_record(
     customer: Customer,
     result: PredictionResultResponse,
     base_inputs: dict[str, Any],
+    *,
+    commit: bool = True,
 ) -> Prediction:
     prediction = Prediction(
         customer_id=customer.id,
@@ -46,8 +48,9 @@ def save_prediction_record(
         recommended_action=result.insight.recommended_action,
     )
     db.add(prediction)
-    db.commit()
-    db.refresh(prediction)
+    if commit:
+        db.commit()
+        db.refresh(prediction)
     return prediction
 
 
