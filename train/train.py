@@ -1,4 +1,4 @@
-import mlflow
+ import mlflow
 import mlflow.sklearn
 import pandas as pd
 from mlflow import MlflowClient
@@ -15,14 +15,20 @@ from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 from sklearn.ensemble import RandomForestClassifier
 from pyspark.sql import SparkSession
-
-
+from databricks.feature_engineering import FeatureEngineeringClient, FeatureLookup
+from sklearn.model_selection import train_test_split
+import logging
+import warnings
+warnings.filterwarnings("ignore")
+logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger("databricks").setLevel(logging.ERROR)
 
 GOLD_BASE_PATH = "/Volumes/workspace/default/data_customers/gold"
 GOLD_TRAIN_PATH = f"{GOLD_BASE_PATH}/train"
-GOLD_TEST_PATH = f"{GOLD_BASE_PATH}/test"
 MODEL_REGISTRY_NAME = "workspace.default.customer_churn_model"
+FEATURE_TABLE_NAME = "workspace.default.customer_features"
 
+fs = FeatureEngineeringClient()
 
 def get_spark() -> SparkSession:
     spark = SparkSession.getActiveSession()
@@ -31,10 +37,23 @@ def get_spark() -> SparkSession:
     return SparkSession.builder.appName("customer-churn-train-model").getOrCreate()
 
 
-def load_gold_data(spark: SparkSession):
-    df_train = spark.read.parquet(GOLD_TRAIN_PATH).toPandas()
-    df_test = spark.read.parquet(GOLD_TEST_PATH).toPandas()
-    return df_train, df_test
+def load_training_data(spark: SparkSession):
+    df = spark.read.format("delta").load(GOLD_TRAIN_PATH)
+    label_df = df.select("customerid", "churn")
+    feature_lookups = [
+        FeatureLookup(
+            table_name=FEATURE_TABLE_NAME,
+            lookup_key="customerid"
+        )
+    ]
+
+    training_set = fs.create_training_set(
+        df=label_df,
+        feature_lookups=feature_lookups,
+        label="churn"
+    )
+
+    return training_set
 
 
 def build_preprocessor(X_train: pd.DataFrame):
@@ -99,11 +118,11 @@ def build_candidate_models():
 
 
 def train_and_select_model(df_train: pd.DataFrame, df_test: pd.DataFrame):
-    X_train = df_train.drop(columns=["Churn"])
-    y_train = df_train["Churn"]
+    X_train = df_train.drop(columns=["churn"])
+    y_train = df_train["churn"]
 
-    X_test = df_test.drop(columns=["Churn"])
-    y_test = df_test["Churn"]
+    X_test = df_test.drop(columns=["churn"])
+    y_test = df_test["churn"]
 
     preprocessor = build_preprocessor(X_train)
     raw_models = build_candidate_models()
@@ -151,7 +170,6 @@ def train_and_select_model(df_train: pd.DataFrame, df_test: pd.DataFrame):
     signature = infer_signature(X_train, final_pipeline.predict(X_train))
     return final_pipeline, best_model_name, results_df, signature
 
-
 def log_model(final_pipeline, best_model_name, results_df, signature) -> str:
     spark = SparkSession.getActiveSession()
     user = spark.sql("SELECT current_user()").collect()[0][0]
@@ -181,10 +199,23 @@ def log_model(final_pipeline, best_model_name, results_df, signature) -> str:
     return str(latest_version)
 
 
+
 def main() -> None:
     spark = get_spark()
-    df_train, df_test = load_gold_data(spark)
+
+    training_set = load_training_data(spark)
+
+    df = training_set.load_df().toPandas()
+
+    df_train, df_test = train_test_split(
+        df,
+        test_size=0.2,
+        random_state=42,
+        stratify=df["churn"]
+    )
+
     final_pipeline, best_model_name, results_df, signature = train_and_select_model(df_train, df_test)
+
     log_model(final_pipeline, best_model_name, results_df, signature)
 
 

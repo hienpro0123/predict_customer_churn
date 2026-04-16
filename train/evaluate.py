@@ -17,14 +17,14 @@ def get_spark() -> SparkSession:
 
 
 def load_gold_test_data(spark: SparkSession):
-    return spark.read.parquet(GOLD_TEST_PATH).toPandas()
+    return spark.read.format("delta").load(GOLD_TEST_PATH).toPandas()
 
 
 def evaluate_latest_model(df_test) -> None:
     model = mlflow.sklearn.load_model(f"models:/{MODEL_REGISTRY_NAME}@champion")
 
-    X_test = df_test.drop(columns=["Churn"])
-    y_test = df_test["Churn"]
+    X_test = df_test.drop(columns=["churn"])
+    y_test = df_test["churn"]
 
     y_pred = model.predict(X_test)
     print(classification_report(y_test, y_pred))
