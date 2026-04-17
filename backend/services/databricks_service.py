@@ -1,3 +1,5 @@
+from functools import lru_cache
+import time
 from typing import Any
 
 import requests
@@ -8,6 +10,7 @@ from utils.constants import FEATURE_COLUMNS
 from utils.helpers import clamp_probability, normalize_prediction_value
 
 
+@lru_cache(maxsize=1)
 def _create_session() -> requests.Session:
     session = requests.Session()
     if settings.DISABLE_OUTBOUND_PROXY:
@@ -65,27 +68,64 @@ def _extract_prediction(result: Any) -> tuple[int, float]:
     raise ValueError("Unexpected prediction format returned by Databricks Model Serving.")
 
 
+def _should_retry_status_code(status_code: int) -> bool:
+    return status_code in {429, 502, 503, 504}
+
+
+def _sleep_before_retry(attempt_number: int) -> None:
+    delay = max(settings.DATABRICKS_RETRY_BACKOFF_SECONDS, 0) * attempt_number
+    if delay > 0:
+        time.sleep(delay)
+
+
 def _post_payload(records: list[dict[str, Any]]) -> list[tuple[int, float]]:
-    payload = {"dataframe_records": [{column: row[column] for column in FEATURE_COLUMNS} for row in records]}
-    try:
-        response = _create_session().post(
-            settings.DATABRICKS_URL,
-            headers=_build_headers(),
-            json=payload,
-            timeout=settings.DATABRICKS_TIMEOUT,
-        )
-        response.raise_for_status()
-    except requests.exceptions.Timeout as exc:
-        raise HTTPException(status_code=504, detail="Databricks request timed out.") from exc
-    except requests.exceptions.ConnectionError as exc:
-        raise HTTPException(status_code=502, detail=f"Could not connect to Databricks: {exc}") from exc
-    except requests.exceptions.HTTPError as exc:
-        raise HTTPException(status_code=response.status_code, detail=response.text or "Databricks API error.") from exc
-    except requests.exceptions.RequestException as exc:
-        raise HTTPException(status_code=502, detail=f"Databricks request failed: {exc}") from exc
+    payload = {
+        "dataframe_records": [
+            {column: row.get(column) for column in FEATURE_COLUMNS}
+            for row in records
+        ]
+    }
+    retry_attempts = max(settings.DATABRICKS_RETRY_ATTEMPTS, 0)
+    total_attempts = retry_attempts + 1
+    response: requests.Response | None = None
+
+    for attempt_number in range(1, total_attempts + 1):
+        try:
+            response = _create_session().post(
+                settings.DATABRICKS_URL,
+                headers=_build_headers(),
+                json=payload,
+                timeout=(5, settings.DATABRICKS_TIMEOUT),
+            )
+            response.raise_for_status()
+            break
+        except requests.exceptions.Timeout as exc:
+            if attempt_number < total_attempts:
+                _sleep_before_retry(attempt_number)
+                continue
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    f"Databricks request timed out after {total_attempts} attempt(s). "
+                    "The serving endpoint may still be waking up."
+                ),
+            ) from exc
+        except requests.exceptions.ConnectionError as exc:
+            if attempt_number < total_attempts:
+                _sleep_before_retry(attempt_number)
+                continue
+            raise HTTPException(status_code=502, detail=f"Could not connect to Databricks: {exc}") from exc
+        except requests.exceptions.HTTPError as exc:
+            status_code = response.status_code if response is not None else 502
+            if attempt_number < total_attempts and _should_retry_status_code(status_code):
+                _sleep_before_retry(attempt_number)
+                continue
+            raise HTTPException(status_code=status_code, detail=response.text or "Databricks API error.") from exc
+        except requests.exceptions.RequestException as exc:
+            raise HTTPException(status_code=502, detail=f"Databricks request failed: {exc}") from exc
 
     try:
-        predictions = response.json().get("predictions")
+        predictions = response.json().get("predictions") if response is not None else None
     except ValueError as exc:
         raise HTTPException(status_code=502, detail="Databricks returned invalid JSON.") from exc
 

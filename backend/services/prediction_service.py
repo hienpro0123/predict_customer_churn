@@ -7,7 +7,6 @@ from models.prediction import Prediction
 from schemas.prediction import BatchPredictionItem, PredictionResultResponse
 from services.analytics_service import get_risk_level, get_top_risk_drivers
 from services.databricks_service import predict_batch, predict_single
-from services.external_ai_service import generate_retention_insight
 from services.feature_service import create_features, validate_inputs
 
 
@@ -22,12 +21,10 @@ def prepare_single_prediction_features(base_inputs: dict[str, Any]) -> dict[str,
 def run_single_prediction(base_inputs: dict[str, Any]) -> PredictionResultResponse:
     features = prepare_single_prediction_features(base_inputs)
     prediction, probability = predict_single(features)
-    insight = generate_retention_insight(base_inputs, probability)
     return PredictionResultResponse(
         prediction=prediction,
         probability=probability,
         risk_level=get_risk_level(probability),
-        insight=insight,
         top_risk_drivers=get_top_risk_drivers(base_inputs, top_n=5),
     )
 
@@ -37,17 +34,19 @@ def save_prediction_record(
     customer: Customer,
     result: PredictionResultResponse,
     base_inputs: dict[str, Any],
+    *,
+    commit: bool = True,
 ) -> Prediction:
     prediction = Prediction(
         customer_id=customer.id,
         predicted_label=result.prediction,
         churn_probability=result.probability,
         model_input_snapshot=base_inputs,
-        recommended_action=result.insight.recommended_action,
     )
     db.add(prediction)
-    db.commit()
-    db.refresh(prediction)
+    if commit:
+        db.commit()
+        db.refresh(prediction)
     return prediction
 
 

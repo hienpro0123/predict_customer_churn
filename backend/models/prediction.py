@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.session import Base
@@ -14,7 +14,6 @@ class Prediction(Base):
     predicted_label: Mapped[int] = mapped_column(Integer, nullable=False)
     churn_probability: Mapped[float] = mapped_column(Float, nullable=False)
     model_input_snapshot: Mapped[dict | None] = mapped_column(JSON)
-    recommended_action: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     customer = relationship("Customer", back_populates="predictions")

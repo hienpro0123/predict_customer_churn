@@ -3,6 +3,14 @@ from typing import Any
 from utils.constants import CONTRACT_RISK_MAP, RISK_THRESHOLDS, SUBSCRIPTION_RISK_MAP
 
 
+def normalize(base_inputs: dict[str, Any]) -> dict[str, Any]:
+    return {k.strip().lower().replace(" ", "_"): v for k, v in base_inputs.items()}
+
+
+def format_feature_label(label: str) -> str:
+    return " ".join(part.capitalize() for part in label.split("_"))
+
+
 def get_risk_level(probability: float) -> str:
     if probability >= RISK_THRESHOLDS["high"]:
         return "HIGH"
@@ -12,55 +20,58 @@ def get_risk_level(probability: float) -> str:
 
 
 def get_top_risk_drivers(base_inputs: dict[str, Any], top_n: int = 5) -> list[dict[str, Any]]:
-    payment_delay = float(base_inputs["Payment Delay"])
-    support_calls = float(base_inputs["Support Calls"])
-    last_interaction = float(base_inputs["Last Interaction"])
-    usage = float(base_inputs["Usage Frequency"])
-    tenure = float(base_inputs["Tenure"])
-    total_spend = float(base_inputs["Total Spend"])
-    subscription = str(base_inputs["Subscription Type"])
-    contract = str(base_inputs["Contract Length"])
+    x = normalize(base_inputs)
+
+    payment_delay = float(x["payment_delay"])
+    support_calls = float(x["support_calls"])
+    last_interaction = float(x["last_interaction"])
+    usage = float(x["usage_frequency"])
+    tenure = float(x["tenure"])
+    total_spend = float(x["total_spend"])
+    subscription = str(x["subscription_type"])
+    contract = str(x["contract_length"])
 
     candidates = [
         {
-            "label": "Payment Delay",
+            "label": format_feature_label("payment_delay"),
             "score": min(payment_delay / 30.0, 1.0),
             "reason": f"{int(payment_delay)} days delayed payment behavior.",
         },
         {
-            "label": "Support Calls",
+            "label": format_feature_label("support_calls"),
             "score": min(support_calls / 20.0, 1.0),
             "reason": f"{int(support_calls)} support interactions in this period.",
         },
         {
-            "label": "Last Interaction",
+            "label": format_feature_label("last_interaction"),
             "score": min(last_interaction / 30.0, 1.0),
             "reason": f"{int(last_interaction)} days since most recent interaction.",
         },
         {
-            "label": "Usage Frequency",
+            "label": format_feature_label("usage_frequency"),
             "score": max(0.0, 1.0 - min(usage / 30.0, 1.0)),
             "reason": f"Usage level is {int(usage)} sessions.",
         },
         {
-            "label": "Tenure",
+            "label": format_feature_label("tenure"),
             "score": max(0.0, 1.0 - min(tenure / 60.0, 1.0)),
             "reason": f"Tenure is {int(tenure)} months.",
         },
         {
-            "label": "Total Spend",
+            "label": format_feature_label("total_spend"),
             "score": max(0.0, 1.0 - min(total_spend / 10000.0, 1.0)),
             "reason": f"Total spend is {total_spend:,.0f}.",
         },
         {
-            "label": "Subscription Type",
+            "label": format_feature_label("subscription_type"),
             "score": SUBSCRIPTION_RISK_MAP.get(subscription, 0.5),
             "reason": f"Current plan is {subscription}.",
         },
         {
-            "label": "Contract Length",
+            "label": format_feature_label("contract_length"),
             "score": CONTRACT_RISK_MAP.get(contract, 0.5),
             "reason": f"Contract is {contract}.",
         },
     ]
+
     return sorted(candidates, key=lambda item: item["score"], reverse=True)[:top_n]
