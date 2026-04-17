@@ -10,12 +10,8 @@ class Settings(BaseSettings):
     DATABRICKS_URL: str
     DATABRICKS_TOKEN: str
     DATABRICKS_TIMEOUT: int
-
-    GEMINI_API_KEY: str
-    GEMINI_API_KEYS: str = ""
-    GEMINI_MODEL: str
-    GEMINI_TIMEOUT: int
-    FAST_PREDICTION_MODE: bool = False
+    DATABRICKS_RETRY_ATTEMPTS: int = 2
+    DATABRICKS_RETRY_BACKOFF_SECONDS: float = 1.0
 
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
@@ -23,6 +19,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str
     POSTGRES_PORT: int
     DISABLE_OUTBOUND_PROXY: bool
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:5173"
 
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).resolve().parents[2] / ".env"),
@@ -38,13 +35,8 @@ class Settings(BaseSettings):
         )
 
     @property
-    def gemini_api_key_pool(self) -> list[str]:
-        keys = [self.GEMINI_API_KEY, *(part.strip() for part in self.GEMINI_API_KEYS.split(","))]
-        unique_keys: list[str] = []
-        for key in keys:
-            if key and key not in unique_keys:
-                unique_keys.append(key)
-        return unique_keys
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 settings = Settings()

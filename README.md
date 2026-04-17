@@ -1,6 +1,6 @@
 # Customer Churn Fullstack App
 
-A full-stack customer churn prediction application built with FastAPI, React (Vite), and PostgreSQL. The system supports single-customer prediction, prediction from stored database records, batch CSV scoring, prediction history tracking, and AI-assisted retention recommendations.
+A full-stack customer churn prediction application built with FastAPI, React (Vite), and PostgreSQL. The system supports single-customer prediction, prediction from stored database records, batch CSV scoring, prediction history tracking, and churn-driver analytics.
 
 ## System Architecture
 
@@ -14,7 +14,6 @@ A full-stack customer churn prediction application built with FastAPI, React (Vi
 - Batch prediction from CSV upload
 - Churn probability, predicted label, risk level, and churn-driver analytics
 - Databricks Model Serving integration for scoring
-- Gemini integration for retention recommendations
 
 ## Project Structure
 
@@ -64,14 +63,13 @@ README.md
 ### External Services
 
 - Databricks Model Serving
-- Gemini API
 
 ## Backend Overview
 
 The backend follows a service-oriented FastAPI structure:
 
 - `routers/`: REST API routes
-- `services/`: feature engineering, prediction, analytics, CSV parsing, Databricks, Gemini, and customer workflows
+- `services/`: feature engineering, prediction, analytics, CSV parsing, Databricks, and customer workflows
 - `models/`: SQLAlchemy ORM models for `customers` and `predictions`
 - `schemas/`: request and response models
 - `database/`: engine, session management, and schema initialization
@@ -107,7 +105,6 @@ Stores prediction results linked to customers:
 - `predicted_label`
 - `churn_probability`
 - `model_input_snapshot`
-- `recommended_action`
 - `created_at`
 
 ### API Endpoints
@@ -157,12 +154,6 @@ The project uses a root-level `.env` file. These are the main variables used by 
 DATABRICKS_URL=
 DATABRICKS_TOKEN=
 DATABRICKS_TIMEOUT=30
-
-GEMINI_API_KEY=
-GEMINI_API_KEYS=
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_TIMEOUT=15
-FAST_PREDICTION_MODE=false
 
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -275,7 +266,6 @@ Submit one customer profile and receive:
 - churn probability
 - risk level
 - churn drivers
-- recommended retention action
 
 ### Predict From Database
 
@@ -298,6 +288,6 @@ You can use [`sample_batch_input.csv`](./sample_batch_input.csv) as a reference 
 2. FastAPI validates the payload with Pydantic schemas.
 3. The service layer transforms the input into model-ready features.
 4. The backend sends the scoring request to the Databricks serving endpoint.
-5. The result is enriched with analytics and a retention recommendation.
+5. The result is enriched with churn analytics.
 6. For database-backed prediction, the result is stored in PostgreSQL.
 7. The frontend renders the final response for review.
