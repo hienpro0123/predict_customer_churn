@@ -43,12 +43,6 @@ class PredictionRequest(BaseModel):
     inputs: BaseInputSchema
 
 
-class InsightResponse(BaseModel):
-    recommended_action: str
-    insight_source: str
-    insight_error: str = ""
-
-
 class RiskDriver(BaseModel):
     label: str
     score: float
@@ -59,7 +53,6 @@ class PredictionResultResponse(BaseModel):
     prediction: int
     probability: float
     risk_level: str
-    insight: InsightResponse
     top_risk_drivers: list[RiskDriver]
 
 
@@ -69,7 +62,6 @@ class StoredPredictionResponse(BaseModel):
     predicted_label: int
     churn_probability: float
     model_input_snapshot: dict[str, Any] | None = None
-    recommended_action: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

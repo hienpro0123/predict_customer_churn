@@ -7,6 +7,10 @@ def normalize(base_inputs: dict[str, Any]) -> dict[str, Any]:
     return {k.strip().lower().replace(" ", "_"): v for k, v in base_inputs.items()}
 
 
+def format_feature_label(label: str) -> str:
+    return " ".join(part.capitalize() for part in label.split("_"))
+
+
 def get_risk_level(probability: float) -> str:
     if probability >= RISK_THRESHOLDS["high"]:
         return "HIGH"
@@ -29,42 +33,42 @@ def get_top_risk_drivers(base_inputs: dict[str, Any], top_n: int = 5) -> list[di
 
     candidates = [
         {
-            "label": "payment_delay",
+            "label": format_feature_label("payment_delay"),
             "score": min(payment_delay / 30.0, 1.0),
             "reason": f"{int(payment_delay)} days delayed payment behavior.",
         },
         {
-            "label": "support_calls",
+            "label": format_feature_label("support_calls"),
             "score": min(support_calls / 20.0, 1.0),
             "reason": f"{int(support_calls)} support interactions in this period.",
         },
         {
-            "label": "last_interaction",
+            "label": format_feature_label("last_interaction"),
             "score": min(last_interaction / 30.0, 1.0),
             "reason": f"{int(last_interaction)} days since most recent interaction.",
         },
         {
-            "label": "usage_frequency",
+            "label": format_feature_label("usage_frequency"),
             "score": max(0.0, 1.0 - min(usage / 30.0, 1.0)),
             "reason": f"Usage level is {int(usage)} sessions.",
         },
         {
-            "label": "tenure",
+            "label": format_feature_label("tenure"),
             "score": max(0.0, 1.0 - min(tenure / 60.0, 1.0)),
             "reason": f"Tenure is {int(tenure)} months.",
         },
         {
-            "label": "total_spend",
+            "label": format_feature_label("total_spend"),
             "score": max(0.0, 1.0 - min(total_spend / 10000.0, 1.0)),
             "reason": f"Total spend is {total_spend:,.0f}.",
         },
         {
-            "label": "subscription_type",
+            "label": format_feature_label("subscription_type"),
             "score": SUBSCRIPTION_RISK_MAP.get(subscription, 0.5),
             "reason": f"Current plan is {subscription}.",
         },
         {
-            "label": "contract_length",
+            "label": format_feature_label("contract_length"),
             "score": CONTRACT_RISK_MAP.get(contract, 0.5),
             "reason": f"Contract is {contract}.",
         },

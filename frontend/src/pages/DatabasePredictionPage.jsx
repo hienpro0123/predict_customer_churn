@@ -149,7 +149,7 @@ export default function DatabasePredictionPage() {
 
       <div className="action-row">
         <button className="primary-button full-width" onClick={handlePredict} disabled={!values || isRunning || isLoadingCustomer}>
-          {isRunning ? "Scoring..." : "Run Prediction From Database"}
+          {isRunning ? "Running..." : "Run Prediction From Database"}
         </button>
         {error ? <div className="error-banner">{error}</div> : null}
       </div>

@@ -50,7 +50,7 @@ export default function SinglePredictionPage() {
       <FormSection values={values} onChange={updateField} disabled={isLoading} />
       <div className="action-row">
         <button className="primary-button" onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? "Scoring..." : "Run Prediction"}
+          {isLoading ? "Running..." : "Run Prediction"}
         </button>
         {error ? <div className="error-banner">{error}</div> : null}
       </div>

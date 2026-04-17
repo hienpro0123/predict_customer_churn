@@ -36,7 +36,6 @@ export default function PredictionHistory({ rows }) {
                 <th>ID</th>
                 <th>Label</th>
                 <th>Probability</th>
-                <th>Recommended Action</th>
                 <th>Created At</th>
               </tr>
             </thead>
@@ -46,7 +45,6 @@ export default function PredictionHistory({ rows }) {
                   <td>{row.prediction_id}</td>
                   <td>{row.predicted_label}</td>
                   <td>{(row.churn_probability * 100).toFixed(2)}%</td>
-                  <td>{row.recommended_action || "-"}</td>
                   <td>{formatCreatedAt(row.created_at)}</td>
                 </tr>
               ))}
