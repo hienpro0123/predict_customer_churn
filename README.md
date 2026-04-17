@@ -1,4 +1,7 @@
-# Customer Churn Fullstack App
+# 👥 Customer Churn Prediction System
+
+## Overview
+
 
 A full-stack customer churn prediction application built with FastAPI, React (Vite), and PostgreSQL. The system supports single-customer prediction, prediction from stored database records, batch CSV scoring, prediction history tracking, and churn-driver analytics.
 
