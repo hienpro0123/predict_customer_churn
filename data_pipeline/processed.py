@@ -3,12 +3,12 @@ import numpy as np
 import os
 from sklearn.preprocessing import LabelEncoder
 
-def preprocess_data(input_file="sample_batch_input.csv", output_file="cleaned_data.csv"):
-    if not os.path.exists(input_file):
-        print(f"Lỗi: Không tìm thấy file {input_file}")
-        return None
+def preprocess_data(data):
+    if not data:
+        print("Lỗi: Dữ liệu đầu vào rỗng")
+        return []
 
-    df = pd.read_csv(input_file)
+    df = pd.DataFrame(data)
     print(f"--- Bat dau Preprocessing ---")
 
     # 1. Xóa trùng lặp
@@ -59,12 +59,13 @@ def preprocess_data(input_file="sample_batch_input.csv", output_file="cleaned_da
                 df.loc[df[col] < 0, col] = 0
                 df.loc[df[col] > 120, col] = 120
 
-    # 6. Lưu dữ liệu
-    df.to_csv(output_file, index=False)
-    print(f"Da luu du lieu sach vao: {output_file}")
     print(f"--- Hoan thanh Preprocessing ---")
     
-    return df
+    return df.to_dict(orient='records')
 
 if __name__ == "__main__":
-    preprocess_data()
+    from fake_data import generate_fake_data
+    raw_data = generate_fake_data(10)
+    clean_data = preprocess_data(raw_data)
+    print(f"Cleaned {len(clean_data)} samples.")
+    print(clean_data[0])

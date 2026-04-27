@@ -8,19 +8,13 @@ def run_pipeline():
     
     # 1. Generate Fake Data
     print("Step 1: Generating 100 samples of fake data...")
-    df = generate_fake_data(100)
-    print(f"Generated data shape: {df.shape}")
-    
-    # Save to CSV for inspection (as per image 1)
-    input_file = "sample_batch_input.csv"
-    df.to_csv(input_file, index=False)
-    print(f"Data saved to {input_file}")
+    raw_data = generate_fake_data(100)
+    print(f"Generated {len(raw_data)} samples.")
     
     # 2. Preprocess Data
     print("Step 2: Preprocessing and Encoding data...")
-    cleaned_df = preprocess_data(input_file=input_file, output_file="cleaned_data.csv")
-    if cleaned_df is not None:
-        print(f"Cleaned data shape: {cleaned_df.shape}")
+    cleaned_data = preprocess_data(raw_data)
+    print(f"Cleaned {len(cleaned_data)} samples.")
     
     # 3. Import to Redis
     print("Step 3: [SKIPPED] Importing data to Redis.")

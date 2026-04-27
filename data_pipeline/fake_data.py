@@ -58,19 +58,9 @@ def generate_fake_data(num_samples=100):
                 
         data.append(row)
         
-    df = pd.DataFrame(data)
-    
-    # Introduce some duplicate CustomerIDs (as hinted in image 2)
-    if random.random() < 0.2: # 20% chance to have a duplicate in a batch
-        idx1 = random.randint(0, num_samples - 1)
-        idx2 = random.randint(0, num_samples - 1)
-        if idx1 != idx2:
-            df.loc[idx1, 'CustomerID'] = df.loc[idx2, 'CustomerID']
-            
-    return df
+    return data
 
 if __name__ == "__main__":
-    df = generate_fake_data(100)
-    print(df.head())
-    df.to_csv("sample_batch_input.csv", index=False)
-    print(f"Generated {len(df)} samples and saved to sample_batch_input.csv")
+    data = generate_fake_data(10)
+    print(f"Generated {len(data)} samples.")
+    print(data[0])
