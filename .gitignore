@@ -1,18 +1,37 @@
 # ========================
-# Python
+# Environment / Virtual Env
 # ========================
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.sqlite3
+.env
+.env.*
+.venv/
+venv/
+env/
 
 # ========================
-# Virtual env
+# Python cache & build
 # ========================
-venv/
-.env/
-.env.*
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ========================
+# Build / Distribution
+# ========================
+build/
+dist/
+*.egg-info/
+
+# ========================
+# Frontend
+# ========================
+frontend/node_modules/
+frontend/dist/
 
 # ========================
 # Jupyter Notebook
@@ -33,7 +52,7 @@ mlruns/
 mlartifacts/
 
 # ========================
-# Data files (QUAN TRỌNG)
+# Data files (cân nhắc)
 # ========================
 *.csv
 *.parquet
@@ -45,13 +64,13 @@ mlartifacts/
 *.log
 
 # ========================
+# IDE / Editor
+# ========================
+.vscode/
+.idea/
+
+# ========================
 # OS
 # ========================
 .DS_Store
 Thumbs.db
-
-# ========================
-# IDE
-# ========================
-.vscode/
-.idea/

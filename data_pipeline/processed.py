@@ -68,4 +68,4 @@ if __name__ == "__main__":
     raw_data = generate_fake_data(10)
     clean_data = preprocess_data(raw_data)
     print(f"Cleaned {len(clean_data)} samples.")
-    print(clean_data[0])
+    print(clean_data[0])
