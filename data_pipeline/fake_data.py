@@ -59,8 +59,3 @@ def generate_fake_data(num_samples=100):
         data.append(row)
         
     return data
-
-if __name__ == "__main__":
-    data = generate_fake_data(10)
-    print(f"Generated {len(data)} samples.")
-    print(data[0])

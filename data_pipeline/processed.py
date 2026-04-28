@@ -4,68 +4,68 @@ import os
 from sklearn.preprocessing import LabelEncoder
 
 def preprocess_data(data):
+    # Check if the input data is empty
     if not data:
-        print("Lỗi: Dữ liệu đầu vào rỗng")
+        print("Error: Input data is empty")
         return []
 
+    # Convert the data into a pandas DataFrame
     df = pd.DataFrame(data)
-    print(f"--- Bat dau Preprocessing ---")
+    print(f"--- Starting Preprocessing ---")
 
-    # 1. Xóa trùng lặp
+    # 1. Remove duplicate records based on CustomerID, keeping the last occurrence
     df = df.drop_duplicates(subset=['CustomerID'], keep='last')
 
-    # 2. Danh sách các cột cần chuẩn hóa chữ (Categorical columns)
+    # 2. Define list of categorical columns to be normalized
     cat_cols = ['Gender', 'Subscription Type', 'Contract Length']
     
-    # 3. Xử lý giá trị thiếu
+    # 3. Handle missing values
     for col in df.columns:
         if col in cat_cols:
+            # Fill missing categorical values with the mode
             if not df[col].empty:
                 df[col] = df[col].fillna(df[col].mode()[0])
         else:
+            # Fill missing numerical values with the median
             if df[col].dtype in [np.float64, np.int64]:
                 df[col] = df[col].fillna(df[col].median())
 
-    # 4. CHUẨN HÓA CHỮ (Normalization)
+    # 4. TEXT NORMALIZATION
     for col in cat_cols:
         if col in df.columns:
+            # Strip whitespace, convert to lowercase, and capitalize the first letter
             df[col] = df[col].astype(str).str.strip().str.lower().str.capitalize()
 
-    # 5. MÃ HÓA CÁC CỘT PHÂN LOẠI (Encoding - LEGIT WAY)
-    # Sử dụng LabelEncoder để chuyên nghiệp hơn
+    # 5. ENCODE CATEGORICAL COLUMNS
+    # Initialize and apply LabelEncoder
     le = LabelEncoder()
     for col in cat_cols:
         if col in df.columns:
             print(f"Encoding column: {col}")
             df[col] = le.fit_transform(df[col])
-            # Lưu ý: Trong thực tế bạn nên lưu 'le' lại để dùng cho inference sau này
 
-
-    # 6. Xử lý Outliers cho các cột số
+    # 6. Handle Outliers for numerical columns
     num_cols = ['Age', 'Total Spend', 'Tenure', 'Usage Frequency', 'Payment Delay']
     for col in num_cols:
         if col in df.columns:
-            # Ép về kiểu số
+            # Force conversion to numeric, coercing errors to NaN
             df[col] = pd.to_numeric(df[col], errors='coerce')
+            # Fill resulting NaNs with the median
             df[col] = df[col].fillna(df[col].median())
             
+            # Cap Age between 18 and 90
             if col == 'Age':
                 df.loc[df[col] > 90, col] = 90
                 df.loc[df[col] < 18, col] = 18
+            # Ensure Total Spend is not negative
             if col == 'Total Spend':
                 df.loc[df[col] < 0, col] = 0
+            # Cap Payment Delay between 0 and 120 days
             if col == 'Payment Delay':
-                # Giả sử delay không quá 120 ngày
                 df.loc[df[col] < 0, col] = 0
                 df.loc[df[col] > 120, col] = 120
 
-    print(f"--- Hoan thanh Preprocessing ---")
+    print(f"--- Preprocessing Complete ---")
     
+    # Return the processed data as a list of dictionaries
     return df.to_dict(orient='records')
-
-if __name__ == "__main__":
-    from fake_data import generate_fake_data
-    raw_data = generate_fake_data(10)
-    clean_data = preprocess_data(raw_data)
-    print(f"Cleaned {len(clean_data)} samples.")
-    print(clean_data[0])
