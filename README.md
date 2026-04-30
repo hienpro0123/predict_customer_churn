@@ -1,269 +1,289 @@
-# 👥 Customer Churn Prediction System
+# 🚀 Customer Churn Prediction System
 
-## Overview
+## 📌 Overview
 
+A full-stack **Customer Churn Prediction** application built with modern data engineering practices. The system predicts customer churn probability using an XGBoost model served via **Databricks Model Serving**, with a complete data pipeline for data ingestion, preprocessing, and storage in **Redis**.
 
-A full-stack customer churn prediction application built with FastAPI, React (Vite), Redis, and Databricks Model Serving. The system supports single-customer prediction, prediction from stored Redis customer records, batch CSV scoring, prediction history tracking, and churn-driver analytics.
+### What the Project Does
+- Predicts customer churn probability (0–100%) for individual customers
+- Supports batch prediction from CSV files
+- Retrieves and scores customers stored in Redis database
+- Provides churn driver analytics (top risk factors per prediction)
+- Tracks prediction history for each customer
 
-## System Architecture
+### Business Problem Solved
+- Identifies at-risk customers before they churn
+- Enables proactive retention strategies
+- Provides actionable insights into churn drivers
 
-<img width="5647" height="3107" alt="Architecture" src="img/flow.jpg" />
+### Data Sources
+| Source | Description |
+|--------|-------------|
+| **CSV Input** | Batch customer data via CSV upload |
+| **Redis Database** | Customer records stored for database prediction |
+| **Fake Data Generator** | Synthetic data generation for testing |
 
-## Main Features
+### Final Output
+- Churn prediction (binary: Churn / No Churn)
+- Churn probability (0–100%)
+- Risk level (LOW / MEDIUM / HIGH)
+- Top 5 churn risk drivers with explanations
+- Prediction history per customer
 
-- Single-customer churn prediction from a manual form
-- Churn prediction for customers stored in Redis
-- Prediction history persistence per customer
-- Batch prediction from CSV upload
-- Churn probability, predicted label, risk level, and churn-driver analytics
-- Databricks Model Serving integration for scoring
+---
 
-## Project Structure
+## 🏗 Architecture
 
-```text
-backend/
-  core/
-  database/
-  models/
-  routers/
-  schemas/
-  services/
-  utils/
-  main.py
-  dockerfile
+```mermaid
+flowchart LR
+    subgraph Client
+        F[React Frontend]
+    end
 
-frontend/
-  src/
-    api/
-    components/
-    pages/
-  dockerfile
-  vite.config.js
+    subgraph Backend
+        API[FastAPI REST API]
+        FS[Feature Engineering]
+        AS[Analytics Service]
+        DB[Databricks Service]
+    end
 
-img/
-docker-compose.yml
-.env
-sample_batch_input.csv
-README.md
+    subgraph Data Layer
+        R[(Redis)]
+        D[Databricks Model Serving]
+    end
+
+    subgraph Data Pipeline
+        FG[Fake Data Generator]
+        PP[Preprocessor]
+        RI[Redis Importer]
+    end
+
+    F -->|HTTP| API
+    API --> FS
+    FS --> DB
+    DB -->|REST| D
+    API --> AS
+    API --> R
+    FG --> PP --> RI --> R
 ```
 
-## Tech Stack
+---
 
-### Backend
+## 🔄 Data Pipeline
 
-- FastAPI
-- Pydantic
-- Redis
-- Uvicorn
+### 1. Extract / Ingest
+- **Fake Data Generator** (`data_pipeline/fake_data.py`): Generates synthetic customer records with realistic patterns and intentional "dirty data" (missing values, outliers, inconsistent casing)
+- **CSV Upload**: Batch prediction accepts CSV files with customer attributes
 
-### Frontend
+### 2. Transform
+- **Preprocessing** (`data_pipeline/processed.py`):
+  - Deduplication based on CustomerID
+  - Missing value imputation (median for numeric, mode for categorical)
+  - Text normalization (lowercase + capitalize)
+  - Label encoding for categorical columns
+  - Outlier handling (Age: 18–90, Payment Delay: 0–120 days)
+  - Negative spend correction
 
-- React 18
-- Vite
-- Fetch API
+### 3. Load
+- **Redis Import** (`data_pipeline/redis_importer.py`): Stores processed customer records in Redis with key pattern `customer:{customer_id}`
 
-### External Services
+### 4. Orchestration
+- **Manual Pipeline Execution**: `python data_pipeline/main.py` runs the full ETL pipeline
+- **Backend API**: FastAPI handles prediction requests with built-in feature engineering
 
-- Databricks Model Serving
+### 5. Data Quality / Validation
+- Input validation in `feature_service.py` ensures all required fields are present
+- Type coercion and error handling for invalid data
+- Outlier capping to prevent model degradation
 
-## Backend Overview
+### 6. Analytics / Dashboard
+- **Risk Level Classification**: LOW (< 30%), MEDIUM (30–70%), HIGH (> 70%)
+- **Churn Driver Analytics**: Identifies top 5 risk factors per prediction with explanations
 
-The backend follows a service-oriented FastAPI structure:
+---
 
-- `routers/`: REST API routes
-- `services/`: feature engineering, prediction, analytics, CSV parsing, Databricks, and customer workflows
-- `models/`: plain Python domain models for customers and predictions
-- `schemas/`: request and response models
-- `database/`: Redis client wiring
-- `core/`: application settings loaded from `.env`
-- `utils/`: shared constants and helper utilities
+## 🛠 Tech Stack
+
+![Tech Stack](https://skillicons.dev/icons?i=python,fastapi,react,redis,docker,aws,xgboost,sklearn,pandas)
+
+| Category | Technology |
+|----------|------------|
+| **Backend** | FastAPI, Pydantic, Uvicorn |
+| **Frontend** | React 18, Vite |
+| **Database** | Redis |
+| **ML Model** | XGBoost (trained in notebooks) |
+| **ML Serving** | Databricks Model Serving |
+| **Data Processing** | Pandas, Scikit-learn |
+| **Containerization** | Docker, Docker Compose |
+
+---
+
+## 📂 Project Structure
+
+```
+churn-prediction/
+├── backend/                    # FastAPI backend
+│   ├── core/                  # Configuration (settings)
+│   ├── database/              # Redis client
+│   ├── models/                # Domain models (Customer, Prediction)
+│   ├── routers/               # API endpoints (customers, predictions, health)
+│   ├── schemas/               # Pydantic request/response models
+│   ├── services/              # Business logic
+│   │   ├── analytics_service  # Risk level & driver analysis
+│   │   ├── csv_service        # CSV parsing for batch prediction
+│   │   ├── customer_service   # Customer CRUD operations
+│   │   ├── databricks_service # Databricks API integration
+│   │   ├── feature_service    # Feature engineering
+│   │   └── prediction_service # Prediction orchestration
+│   ├── utils/                 # Constants and helpers
+│   ├── main.py                # FastAPI app entry point
+│   └── dockerfile
+│
+├── frontend/                  # React frontend
+│   ├── src/
+│   │   ├── api/              # API client
+│   │   ├── components/       # Reusable UI components
+│   │   └── pages/            # Page views (Single, Batch, Database prediction)
+│   ├── dockerfile
+│   └── vite.config.js
+│
+├── data_pipeline/            # ETL pipeline
+│   ├── fake_data.py          # Synthetic data generation
+│   ├── processed.py          # Data preprocessing & cleaning
+│   ├── redis_importer.py    # Redis data import
+│   └── main.py               # Pipeline orchestration
+│
+├── notebooks/                 # Jupyter notebooks
+│   ├── EDA.ipynb             # Exploratory Data Analysis
+│   ├── offline_features.ipynb# Feature engineering experiments
+│   └── train_model.ipynb     # XGBoost model training
+│
+├── docker-compose.yml        # Multi-container orchestration
+├── requirements.txt          # Root dependencies
+└── sample_batch_input.csv   # Sample batch input file
+```
+
+### Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| `backend/routers/` | REST API endpoints for prediction |
+| `backend/services/feature_service.py` | Feature engineering (17 derived features) |
+| `backend/services/databricks_service.py` | Integration with Databricks Model Serving |
+| `backend/services/analytics_service.py` | Risk classification and driver analysis |
+| `data_pipeline/` | End-to-end ETL pipeline for data ingestion |
+
+---
+
+## ⚙️ How to Run
+
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.12+ (for local development)
+- Redis instance
+- Databricks workspace (for ML model serving)
+
+### Setup Instructions
+
+#### 1. Clone Repository
+```bash
+git clone <repository-url>
+cd churn-prediction
+```
+
+#### 2. Configure Environment
+Create a `.env` file in the root directory:
+
+```env
+# Databricks Configuration
+DATABRICKS_URL=https://<your-workspace>.cloud.databricks.com/model/serving-endpoints/<endpoint-name>/invocations
+DATABRICKS_TOKEN=<your-databricks-token>
+DATABRICKS_TIMEOUT=30
+DATABRICKS_RETRY_ATTEMPTS=2
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_USERNAME=<username>
+REDIS_PASSWORD=<password>
+REDIS_DB=0
+
+# Proxy Configuration
+DISABLE_OUTBOUND_PROXY=false
+```
+
+#### 3. Run with Docker Compose
+```bash
+docker-compose up --build
+```
+
+- **Backend API**: http://localhost:8000
+- **Frontend UI**: http://localhost:3000
+- **API Docs**: http://localhost:8000/docs
+
+#### 4. Run Data Pipeline (Optional)
+```bash
+cd data_pipeline
+python main.py
+```
+
+This generates fake customer data, preprocesses it, and imports to Redis.
+
+#### 5. Run Batch Prediction
+Upload `sample_batch_input.csv` via the Frontend UI at http://localhost:3000/batch
+
+---
+
+## 📊 Results / Output
+
+### Prediction Response Example
+```json
+{
+  "prediction": "No Churn",
+  "probability": 0.12,
+  "risk_level": "LOW",
+  "top_risk_drivers": [
+    {"label": "Payment Delay", "score": 0.15, "reason": "5 days delayed payment behavior."},
+    {"label": "Support Calls", "score": 0.10, "reason": "2 support interactions in this period."},
+    {"label": "Last Interaction", "score": 0.08, "reason": "10 days since most recent interaction."}
+  ]
+}
+```
+
+### Output Components
+| Output | Description |
+|--------|-------------|
+| **Prediction Label** | Binary classification (Churn / No Churn) |
+| **Probability** | Churn probability (0–1) |
+| **Risk Level** | Categorical risk band (LOW/MEDIUM/HIGH) |
+| **Risk Drivers** | Top 5 contributing factors with explanations |
+| **Prediction History** | Stored in Redis per customer |
 
 ### Redis Keys
 
 #### `customer:{customer_id}`
-
-Stores customer input data used for Redis-backed prediction:
-
-- `id`
-- `age`
-- `gender`
-- `tenure`
-- `usage_frequency`
-- `support_calls`
-- `payment_delay`
-- `subscription_type`
-- `contract_length`
-- `total_spend`
-- `last_interaction`
-- `created_at`
-- `updated_at`
+Stores customer input data used for Redis-backed prediction.
 
 #### `prediction_history:{customer_id}`
+Stores prediction results linked to customers.
 
-Stores prediction results linked to customers:
+---
 
-- `prediction_id`
-- `customer_id`
-- `predicted_label`
-- `churn_probability`
-- `model_input_snapshot`
-- `created_at`
+## 💡 Key Learnings
 
-### API Endpoints
+- **Feature Engineering**: Created 17 derived features (e.g., `usage_per_tenure`, `engagement_score`) to improve model performance
+- **API Integration**: Built robust integration with Databricks Model Serving with retry logic and error handling
+- **Data Pipeline Design**: Implemented complete ETL pipeline with data quality checks (missing values, outliers, deduplication)
+- **Real-time vs Batch**: Supported both real-time single prediction and batch CSV processing
+- **Containerization**: Dockerized both frontend and backend services with Docker Compose orchestration
 
-#### Health
+---
 
-- `GET /api/health`
+## 🚧 Future Improvements
 
-#### Customers
-
-- `GET /api/customers`
-- `GET /api/customers/{customer_id}`
-- `PUT /api/customers/{customer_id}`
-- `GET /api/customers/{customer_id}/predictions`
-- `POST /api/customers/{customer_id}/predict`
-
-#### Predictions
-
-- `POST /api/predictions/single`
-- `POST /api/predictions/batch`
-
-## Frontend Overview
-
-The frontend is a React application powered by Vite and currently supports three main workflows:
-
-- `Single Prediction`
-- `Predict From Database`
-- `Batch Prediction`
-
-The client API layer is located in `frontend/src/api/client.js`. By default, the frontend calls the backend through:
-
-```text
-http://localhost:8000/api
-```
-
-If needed, you can override it with:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000/api
-```
-
-## Environment Variables
-
-The project uses a root-level `.env` file. These are the main variables used by the app:
-
-```env
-DATABRICKS_URL=
-DATABRICKS_TOKEN=
-DATABRICKS_TIMEOUT=30
-
-REDIS_HOST=
-REDIS_PORT=6379
-REDIS_USERNAME=default
-REDIS_PASSWORD=
-REDIS_DB=0
-
-DISABLE_OUTBOUND_PROXY=true
-VITE_API_BASE_URL=http://localhost:8000/api
-```
-
-## Run Locally
-
-### 1. Install backend dependencies
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-### 2. Install frontend dependencies
-
-```bash
-cd frontend
-npm install
-```
-
-### 3. Start the backend
-
-```bash
-cd backend
-uvicorn main:app --reload
-```
-
-The backend will be available at `http://localhost:8000`.
-
-### 4. Start the frontend
-
-```bash
-cd frontend
-npm run dev
-```
-
-The frontend will be available at `http://localhost:3000`.
-
-## Run With Docker Compose
-
-The project can run the app stack with Docker Compose:
-
-- `backend`
-- `frontend`
-
-### Build and start
-
-```bash
-docker compose up --build
-```
-
-### Start in detached mode
-
-```bash
-docker compose up -d --build
-```
-
-### Service URLs
-
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
-- Health check: `http://localhost:8000/api/health`
-
-### Stop services
-
-```bash
-docker compose down
-```
-
-## Usage
-
-### Single Prediction
-
-Submit one customer profile and receive:
-
-- predicted label
-- churn probability
-- risk level
-- churn drivers
-
-### Predict From Stored Customers
-
-This workflow allows you to:
-
-- load customers from Redis
-- update customer data before prediction
-- run prediction for a stored customer
-- persist prediction history in Redis
-
-### Batch Prediction
-
-Upload a CSV file to run bulk prediction. If the file has missing columns or invalid values, the backend returns validation errors.
-
-You can use [`sample_batch_input.csv`](./sample_batch_input.csv) as a reference file.
-
-## Prediction Lifecycle
-
-1. A user submits customer data from the frontend.
-2. FastAPI validates the payload with Pydantic schemas.
-3. The service layer transforms the input into model-ready features.
-4. The backend sends the scoring request to the Databricks serving endpoint.
-5. The result is enriched with churn analytics.
-6. For stored-customer prediction, the result is stored in Redis.
-7. The frontend renders the final response for review.
+- [ ] **CI/CD Pipeline**: Add GitHub Actions for automated testing and deployment
+- [ ] **Data Quality Monitoring**: Implement Great Expectations for pipeline validation
+- [ ] **Orchestration**: Migrate to Apache Airflow or Prefect for scheduled pipeline runs
+- [ ] **Cloud Deployment**: Deploy to AWS ECS / EKS with managed Redis (ElastiCache)
+- [ ] **Model Monitoring**: Add drift detection and model performance tracking
+- [ ] **Feature Store**: Implement Feast for feature registry and reuse
