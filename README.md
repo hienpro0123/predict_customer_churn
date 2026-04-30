@@ -3,7 +3,7 @@
 ## Overview
 
 
-A full-stack customer churn prediction application built with FastAPI, React (Vite), and PostgreSQL. The system supports single-customer prediction, prediction from stored database records, batch CSV scoring, prediction history tracking, and churn-driver analytics.
+A full-stack customer churn prediction application built with FastAPI, React (Vite), Redis, and Databricks Model Serving. The system supports single-customer prediction, prediction from stored Redis customer records, batch CSV scoring, prediction history tracking, and churn-driver analytics.
 
 ## System Architecture
 
@@ -12,7 +12,7 @@ A full-stack customer churn prediction application built with FastAPI, React (Vi
 ## Main Features
 
 - Single-customer churn prediction from a manual form
-- Churn prediction for customers stored in PostgreSQL
+- Churn prediction for customers stored in Redis
 - Prediction history persistence per customer
 - Batch prediction from CSV upload
 - Churn probability, predicted label, risk level, and churn-driver analytics
@@ -52,9 +52,8 @@ README.md
 ### Backend
 
 - FastAPI
-- SQLAlchemy
 - Pydantic
-- PostgreSQL
+- Redis
 - Uvicorn
 
 ### Frontend
@@ -73,17 +72,17 @@ The backend follows a service-oriented FastAPI structure:
 
 - `routers/`: REST API routes
 - `services/`: feature engineering, prediction, analytics, CSV parsing, Databricks, and customer workflows
-- `models/`: SQLAlchemy ORM models for `customers` and `predictions`
+- `models/`: plain Python domain models for customers and predictions
 - `schemas/`: request and response models
-- `database/`: engine, session management, and schema initialization
+- `database/`: Redis client wiring
 - `core/`: application settings loaded from `.env`
 - `utils/`: shared constants and helper utilities
 
-### Database Tables
+### Redis Keys
 
-#### `customers`
+#### `customer:{customer_id}`
 
-Stores customer input data used for database-backed prediction:
+Stores customer input data used for Redis-backed prediction:
 
 - `id`
 - `age`
@@ -99,7 +98,7 @@ Stores customer input data used for database-backed prediction:
 - `created_at`
 - `updated_at`
 
-#### `predictions`
+#### `prediction_history:{customer_id}`
 
 Stores prediction results linked to customers:
 
@@ -158,23 +157,15 @@ DATABRICKS_URL=
 DATABRICKS_TOKEN=
 DATABRICKS_TIMEOUT=30
 
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=churn_db
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=admin
-
-PGADMIN_DEFAULT_EMAIL=admin@admin.com
-PGADMIN_DEFAULT_PASSWORD=admin
+REDIS_HOST=
+REDIS_PORT=6379
+REDIS_USERNAME=default
+REDIS_PASSWORD=
+REDIS_DB=0
 
 DISABLE_OUTBOUND_PROXY=true
 VITE_API_BASE_URL=http://localhost:8000/api
 ```
-
-### Note About `POSTGRES_HOST`
-
-- When running locally without Docker, use `POSTGRES_HOST=localhost`
-- When running with Docker Compose, the `backend` service overrides this to `postgres`
 
 ## Run Locally
 
@@ -192,15 +183,7 @@ cd frontend
 npm install
 ```
 
-### 3. Start PostgreSQL
-
-You can use a local PostgreSQL instance or start the database services with Docker:
-
-```bash
-docker compose up -d postgres pgadmin
-```
-
-### 4. Start the backend
+### 3. Start the backend
 
 ```bash
 cd backend
@@ -209,7 +192,7 @@ uvicorn main:app --reload
 
 The backend will be available at `http://localhost:8000`.
 
-### 5. Start the frontend
+### 4. Start the frontend
 
 ```bash
 cd frontend
@@ -220,12 +203,10 @@ The frontend will be available at `http://localhost:3000`.
 
 ## Run With Docker Compose
 
-The project can run the full stack with Docker Compose:
+The project can run the app stack with Docker Compose:
 
-- `postgres`
 - `backend`
 - `frontend`
-- `pgadmin`
 
 ### Build and start
 
@@ -244,19 +225,11 @@ docker compose up -d --build
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:8000`
 - Health check: `http://localhost:8000/api/health`
-- pgAdmin: `http://localhost:5050`
-- PostgreSQL: `localhost:5432`
 
 ### Stop services
 
 ```bash
 docker compose down
-```
-
-To remove the database volume as well:
-
-```bash
-docker compose down -v
 ```
 
 ## Usage
@@ -270,14 +243,14 @@ Submit one customer profile and receive:
 - risk level
 - churn drivers
 
-### Predict From Database
+### Predict From Stored Customers
 
 This workflow allows you to:
 
-- load customers from PostgreSQL
+- load customers from Redis
 - update customer data before prediction
 - run prediction for a stored customer
-- persist prediction history in the `predictions` table
+- persist prediction history in Redis
 
 ### Batch Prediction
 
@@ -292,5 +265,5 @@ You can use [`sample_batch_input.csv`](./sample_batch_input.csv) as a reference 
 3. The service layer transforms the input into model-ready features.
 4. The backend sends the scoring request to the Databricks serving endpoint.
 5. The result is enriched with churn analytics.
-6. For database-backed prediction, the result is stored in PostgreSQL.
+6. For stored-customer prediction, the result is stored in Redis.
 7. The frontend renders the final response for review.

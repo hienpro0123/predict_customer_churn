@@ -1,5 +1,5 @@
 FEATURE_COLUMNS = [
-    "customerid",
+    "customer_id",
     "age",
     "gender",
     "tenure",

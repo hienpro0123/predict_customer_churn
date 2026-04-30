@@ -7,7 +7,10 @@ from schemas.customer import CustomerResponse
 
 
 class BaseInputSchema(BaseModel):
-    customerid: int = Field(default=0, validation_alias=AliasChoices("customerid", "CustomerID", "Customer Id"))
+    customer_id: int = Field(
+        default=0,
+        validation_alias=AliasChoices("customer_id", "customerid", "CustomerID", "Customer Id", "Customer ID"),
+    )
     age: int = Field(validation_alias=AliasChoices("age", "Age"))
     gender: str = Field(validation_alias=AliasChoices("gender", "Gender"))
     tenure: int = Field(validation_alias=AliasChoices("tenure", "Tenure"))
