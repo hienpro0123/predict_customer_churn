@@ -34,40 +34,19 @@ A full-stack **Customer Churn Prediction** application built with modern data en
 
 ## 🏗 Architecture
 
-```mermaid
-flowchart LR
-    subgraph Client
-        F[React Frontend]
-    end
+<img width="100%" alt="Churn Architecture" src="img/flow.png" />
 
-    subgraph Backend
-        API[FastAPI REST API]
-        FS[Feature Engineering]
-        AS[Analytics Service]
-        DB[Databricks Service]
-    end
+Pipeline flow:
 
-    subgraph Data Layer
-        R[(Redis)]
-        D[Databricks Model Serving]
-    end
-
-    subgraph Data Pipeline
-        FG[Fake Data Generator]
-        PP[Preprocessor]
-        RI[Redis Importer]
-    end
-
-    F -->|HTTP| API
-    API --> FS
-    FS --> DB
-    DB -->|REST| D
-    API --> AS
-    API --> R
-    FG --> PP --> RI --> R
-```
-
----
+1.Fake Data Generator creates customer churn records.
+2.Preprocessing module cleans, normalizes, and encodes the data.
+3.Processed data is stored in Redis as customer records (customer:{id}).
+4.FastAPI receives prediction requests from client (React / API).
+5.FastAPI fetches customer data (online features) from Redis.
+6.Feature engineering logic generates derived features for prediction.
+7.FastAPI sends features to Databricks Model Serving endpoint.
+8.Databricks returns churn prediction, probability, and risk drivers.
+9.FastAPI returns results and stores prediction history in Redis.
 
 ## 🔄 Data Pipeline
 
@@ -278,12 +257,3 @@ Stores prediction results linked to customers.
 - **Containerization**: Dockerized both frontend and backend services with Docker Compose orchestration
 
 ---
-
-## 🚧 Future Improvements
-
-- [ ] **CI/CD Pipeline**: Add GitHub Actions for automated testing and deployment
-- [ ] **Data Quality Monitoring**: Implement Great Expectations for pipeline validation
-- [ ] **Orchestration**: Migrate to Apache Airflow or Prefect for scheduled pipeline runs
-- [ ] **Cloud Deployment**: Deploy to AWS ECS / EKS with managed Redis (ElastiCache)
-- [ ] **Model Monitoring**: Add drift detection and model performance tracking
-- [ ] **Feature Store**: Implement Feast for feature registry and reuse
