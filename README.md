@@ -203,15 +203,20 @@ Upload `sample_batch_input.csv` via the Frontend UI at http://localhost:3000/bat
 
 ## 📊 Results / Output
 
-<div align="center">
-  <img src="img/ui.jpg" width="45%" />
-  <img src="img/result.jpg" width="45%" />
-</div>
+## 📊 Results / Output
 
-<p align="center">
-  <b>UI Dashboard</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <b>Prediction Result</b>
-</p>
+<table align="center">
+<tr>
+<td align="center" width="50%">
+<img src="img/ui.jpg" width="100%"/><br/>
+<b>UI Dashboard</b>
+</td>
+<td align="center" width="50%">
+<img src="img/result.jpg" width="100%"/><br/>
+<b>Prediction Result</b>
+</td>
+</tr>
+</table>
 
 ---
 
