@@ -38,15 +38,15 @@ A full-stack **Customer Churn Prediction** application built with modern data en
 
 Pipeline flow:
 
-1.Fake Data Generator creates customer churn records.
-2.Preprocessing module cleans, normalizes, and encodes the data.
-3.Processed data is stored in Redis as customer records (customer:{id}).
-4.FastAPI receives prediction requests from client (React / API).
-5.FastAPI fetches customer data (online features) from Redis.
-6.Feature engineering logic generates derived features for prediction.
-7.FastAPI sends features to Databricks Model Serving endpoint.
-8.Databricks returns churn prediction, probability, and risk drivers.
-9.FastAPI returns results and stores prediction history in Redis.
+1. Fake Data Generator creates synthetic customer churn records.
+2. Preprocessing module cleans, normalizes, and encodes the data.
+3. Processed data is stored in Redis as customer records (`customer:{id}`).
+4. FastAPI receives prediction requests from the client (React / API).
+5. FastAPI retrieves customer data (online features) from Redis.
+6. Feature engineering logic generates derived features for prediction.
+7. FastAPI sends features to the Databricks Model Serving endpoint.
+8. Databricks returns churn prediction, probability, and risk drivers.
+9. FastAPI returns results and stores prediction history in Redis.
 
 ## 🔄 Data Pipeline
 
