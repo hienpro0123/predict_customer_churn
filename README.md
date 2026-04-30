@@ -71,7 +71,7 @@ A full-stack **Customer Churn Prediction** application built with modern data en
 
 ## 🛠 Tech Stack
 
-![Tech Stack](https://skillicons.dev/icons?i=python,fastapi,react,redis,docker,aws,xgboost,sklearn,pandas)
+![Tech Stack](https://skillicons.dev/icons?i=python,fastapi,react,redis,docker,aws,sklearn,pandas)
 
 | Category | Technology |
 |----------|------------|
@@ -203,36 +203,10 @@ Upload `sample_batch_input.csv` via the Frontend UI at http://localhost:3000/bat
 
 ## 📊 Results / Output
 
-### Prediction Response Example
-```json
-{
-  "prediction": "No Churn",
-  "probability": 0.12,
-  "risk_level": "LOW",
-  "top_risk_drivers": [
-    {"label": "Payment Delay", "score": 0.15, "reason": "5 days delayed payment behavior."},
-    {"label": "Support Calls", "score": 0.10, "reason": "2 support interactions in this period."},
-    {"label": "Last Interaction", "score": 0.08, "reason": "10 days since most recent interaction."}
-  ]
-}
-```
-
-### Output Components
-| Output | Description |
-|--------|-------------|
-| **Prediction Label** | Binary classification (Churn / No Churn) |
-| **Probability** | Churn probability (0–1) |
-| **Risk Level** | Categorical risk band (LOW/MEDIUM/HIGH) |
-| **Risk Drivers** | Top 5 contributing factors with explanations |
-| **Prediction History** | Stored in Redis per customer |
-
-### Redis Keys
-
-#### `customer:{customer_id}`
-Stores customer input data used for Redis-backed prediction.
-
-#### `prediction_history:{customer_id}`
-Stores prediction results linked to customers.
+<div align="center">
+  <img src="img/ui.jpg" width="45%" />
+  <img src="img/result.jpg" width="45%" />
+</div>
 
 ---
 
