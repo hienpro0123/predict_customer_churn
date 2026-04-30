@@ -99,8 +99,6 @@ export default function BatchPredictionPage() {
                   <th>Prediction</th>
                   <th>Probability</th>
                   <th>Risk</th>
-                  <th>Subscription</th>
-                  <th>Contract</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,8 +108,6 @@ export default function BatchPredictionPage() {
                     <td>{row.prediction}</td>
                     <td>{row.churn_probability_percent.toFixed(2)}%</td>
                     <td>{row.risk_level}</td>
-                    <td>{row.inputs["Subscription Type"]}</td>
-                    <td>{row.inputs["Contract Length"]}</td>
                   </tr>
                 ))}
               </tbody>

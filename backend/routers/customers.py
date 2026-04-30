@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 
-from database.session import get_db
 from schemas.customer import CustomerResponse, CustomerUpdate
 from schemas.prediction import CustomerPredictionRequest, CustomerPredictionResponse, StoredPredictionResponse
 from services.customer_service import (
     apply_customer_update,
+    cache_customer,
     get_customer_or_404,
     get_prediction_history,
     list_customers,
@@ -18,32 +17,31 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 
 
 @router.get("", response_model=list[CustomerResponse])
-def get_customers(db: Session = Depends(get_db)) -> list[CustomerResponse]:
-    return list_customers(db)
+def get_customers() -> list[CustomerResponse]:
+    return list_customers()
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
-def get_customer(customer_id: str, db: Session = Depends(get_db)) -> CustomerResponse:
-    return get_customer_or_404(db, customer_id.upper())
+def get_customer(customer_id: str) -> CustomerResponse:
+    return get_customer_or_404(customer_id.upper())
 
 
 @router.put("/{customer_id}", response_model=CustomerResponse)
-def put_customer(customer_id: str, payload: CustomerUpdate, db: Session = Depends(get_db)) -> CustomerResponse:
-    return update_customer(db, customer_id.upper(), payload)
+def put_customer(customer_id: str, payload: CustomerUpdate) -> CustomerResponse:
+    return update_customer(customer_id.upper(), payload)
 
 
 @router.get("/{customer_id}/predictions", response_model=list[StoredPredictionResponse])
-def get_customer_predictions(customer_id: str, db: Session = Depends(get_db)) -> list[StoredPredictionResponse]:
-    return get_prediction_history(db, customer_id.upper())
+def get_customer_predictions(customer_id: str) -> list[StoredPredictionResponse]:
+    return get_prediction_history(customer_id.upper())
 
 
 @router.post("/{customer_id}/predict", response_model=CustomerPredictionResponse)
 def predict_for_customer(
     customer_id: str,
     payload: CustomerPredictionRequest,
-    db: Session = Depends(get_db),
 ) -> CustomerPredictionResponse:
-    customer = get_customer_or_404(db, customer_id.upper())
+    customer = get_customer_or_404(customer_id.upper())
     customer = apply_customer_update(
         customer,
         CustomerUpdate(
@@ -64,11 +62,9 @@ def predict_for_customer(
         result = run_single_prediction(base_inputs)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    db.add(customer)
-    save_prediction_record(db, customer, result, base_inputs, commit=False)
-    db.commit()
-    db.refresh(customer)
-    history = get_prediction_history(db, customer.id)
+    cache_customer(customer)
+    save_prediction_record(customer, result, base_inputs, commit=False)
+    history = get_prediction_history(customer.id)
     return CustomerPredictionResponse(
         customer=CustomerResponse.model_validate(customer),
         result=result,

@@ -1,7 +1,8 @@
+import json
+from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy.orm import Session
-
+from database.redis_client import redis_client
 from models.customer import Customer
 from models.prediction import Prediction
 from schemas.prediction import BatchPredictionItem, PredictionResultResponse
@@ -30,23 +31,37 @@ def run_single_prediction(base_inputs: dict[str, Any]) -> PredictionResultRespon
 
 
 def save_prediction_record(
-    db: Session,
     customer: Customer,
     result: PredictionResultResponse,
     base_inputs: dict[str, Any],
     *,
     commit: bool = True,
 ) -> Prediction:
+    from services.customer_service import prediction_history_key
+
+    created_at = datetime.now(timezone.utc)
+    prediction_id = redis_client.incr("prediction_id")
     prediction = Prediction(
+        prediction_id=prediction_id,
         customer_id=customer.id,
         predicted_label=result.prediction,
         churn_probability=result.probability,
         model_input_snapshot=base_inputs,
+        created_at=created_at,
     )
-    db.add(prediction)
-    if commit:
-        db.commit()
-        db.refresh(prediction)
+    redis_client.lpush(
+        prediction_history_key(customer.id),
+        json.dumps(
+            {
+                "prediction_id": prediction.prediction_id,
+                "customer_id": prediction.customer_id,
+                "predicted_label": prediction.predicted_label,
+                "churn_probability": prediction.churn_probability,
+                "model_input_snapshot": prediction.model_input_snapshot,
+                "created_at": prediction.created_at.isoformat(),
+            }
+        ),
+    )
     return prediction
 
 

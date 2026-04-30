@@ -28,7 +28,7 @@ def create_features(base_inputs: dict[str, Any]) -> dict[str, Any]:
     x = {normalize_key(key): value for key, value in base_inputs.items()}
 
     # đảm bảo có customerid
-    x["customerid"] = normalize_customerid(x.get("customerid"))
+    x["customer_id"] = normalize_customerid(x.get("customer_id", x.get("customerid")))
 
     # feature engineering
     tenure = x["tenure"]
