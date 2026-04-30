@@ -200,10 +200,20 @@ This generates fake customer data, preprocesses it, and imports to Redis.
 Upload `sample_batch_input.csv` via the Frontend UI at http://localhost:3000/batch
 
 ---
-
 ## 📊 Results / Output
 
-## 📊 Results / Output
+### Model Performance
+
+| Model                | AUC    | Recall | Accuracy |
+|---------------------|--------|--------|----------|
+| **XGBoost**         | 0.9486 | 0.8667 | 0.9047   |
+| Random Forest       | 0.9431 | 0.8674 | 0.9050   |
+| Logistic Regression | 0.9141 | 0.8043 | 0.8464   |
+| Decision Tree       | 0.8881 | 0.7231 | 0.8094   |
+
+---
+
+### System Demo
 
 <table align="center">
 <tr>
