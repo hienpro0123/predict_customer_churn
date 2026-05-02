@@ -32,6 +32,18 @@ A full-stack **Customer Churn Prediction** application built with modern data en
 
 ---
 
+## 🌐 Deployment (AWS EC2)
+
+The application has been successfully deployed on AWS EC2 using Docker Compose.
+
+- **Frontend UI**: http://18.140.50.24:3000  
+- **Backend API**: http://18.140.50.24:8000  
+- **API Documentation**: http://18.140.50.24:8000/docs  
+
+> Note: The EC2 instance may be stopped to save cost, so the link might not always be available.
+
+---
+
 ## 🏗 Architecture
 
 <img width="100%" alt="Churn Architecture" src="img/flow.png" />
